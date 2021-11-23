@@ -137,6 +137,15 @@ class Queryable:
         save_cache()
 
     @classmethod
+    def parse_data(cls, data: dict) -> dict:
+        if data.get("parsed"):
+            logging.info("Data already parsed")
+            return data
+        data["entries"] = cls.parse_entries(data.get("entries", []))
+        data["parsed"] = True
+        return data
+
+    @classmethod
     def read_cache(cls, key):
         global cache
         open_cache()
@@ -167,8 +176,26 @@ class Queryable:
 
     @classmethod
     def parse_entries(cls, entries: list) -> list[dict]:
-        raise NotImplementedError(
-            f"{cls.NAME()} - Data parsing has not yet been implemented.")
+        new_entries = []
+
+        for entry in entries:
+
+            raise NotImplementedError(
+                f"{cls.NAME()} - Data parsing has not yet been implemented.")
+
+            new_entries.append({
+                "title": "",
+                "type": "",
+                "page": "",
+                "command": "",
+
+                "size": "",
+                "seeds": 0,
+                "leechers": 0,
+                "completions": 0,
+            })
+
+        return new_entries
 
     @classmethod
     def make_table(cls, data: dict) -> Table:

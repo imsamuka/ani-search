@@ -127,24 +127,22 @@ def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     cls.log(logging.debug,
             f"data['entries'] = {data.setdefault('entries', {})}")
-    cls.log(logging.debug, f"len(data['entries']) == {len(data['entries'])}")
+    cls.log(logging.info, f"len(data['entries']) == {len(data['entries'])}")
     cls.log(
-        logging.debug,
+        logging.info,
         f"data = {(lambda d: (d.pop('entries') or True) and d)(data.copy())}")
 
     if not data.get("entries"):
         raise Exception("0 entries found.")
 
     s.update(f"[status]Parsing {cls.NAME()} data...")
-    data["entries"] = cls.parse_entries(data["entries"])
-
+    data = cls.parse_data(data)
     if not data["entries"]:
         raise Exception("every entry was removed during parsing of data.")
 
     cls.log(logging.debug, f"parsed data['entries'] = {data['entries']}")
 
     s.update(f"[status]Creating table for {cls.NAME()}...")
-
     table = cls.make_table(data)
 
     print(table, justify="center")
