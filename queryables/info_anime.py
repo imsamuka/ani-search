@@ -25,12 +25,16 @@ class Info_Anime(Queryable):
             ul = soup.find(id="myUL")
             all_links = ul.find_all("a", href=re.compile(r"^dados\?obra="))
 
-            links = tuple((get_body(a), cls.END_POINT + get_href(a))
-                          for a in all_links)
+            links = {get_body(a): cls.END_POINT + get_href(a)
+                     for a in all_links}
 
             cls.write_cache("all", links)
 
-        filtered = tuple(filter(lambda e: query in e[0].lower(), links))
+        if query:
+            filtered = [l for l in links.items() if query in l[0].lower()]
+        else:
+            filtered = [links.items()]
+
         entries.extend(filtered[start:]
                        if all_pages else filtered[start:start+length])
 
