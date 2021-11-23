@@ -7,15 +7,12 @@ class AnimeNSK_Packs(Queryable):
 
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
-        entries = kwargs.get("entries", [])
+        entries = cls.read_cache("entries") or []
         start = page * length
 
-        content = cls.read_cache(query)
-
-        if not content:
+        if not entries:
             url = cls.END_POINT + "index.php"
-            params = {"Modo": "Busca", "find": query} if query else {
-                "Modo": "Packs", "bot": "Todos"}
+            params = {"Modo": "Packs", "bot": "Todos"}
 
             res = requests.get(url, params)
             cls.log_response(res, page)
@@ -23,15 +20,19 @@ class AnimeNSK_Packs(Queryable):
             content = str((res and (res.status_code == 200)
                            and res.content) or "<html></html>")
 
-            cls.write_cache(query, content)
+            trs = BeautifulSoup(content, 'html.parser').find_all(
+                "tr", class_=re.compile(r"^L1$"))
 
-        trs = BeautifulSoup(content, 'html.parser').find_all(
-            "tr", class_=re.compile(r"^L1$"))
+            entries = cls.parse_entries(trs)
+            cls.write_cache("entries", entries)
 
-        entries.extend(trs[start:] if all_pages else trs[start:start+length])
+        if query:
+            entries[:] = [e for e in entries if query in e["title"].lower()]
+        total = len(entries)
 
-        total = len(trs)
+        entries[:] = entries[start:] if all_pages else entries[start:start+length]
         showing = len(entries)
+
         remaining = total - (start + showing)
         if remaining < 0:
             remaining = 0
@@ -42,6 +43,7 @@ class AnimeNSK_Packs(Queryable):
             "showing": showing,
             "remaining": remaining,
             "total": total,
+            "parsed": True
         }
 
     @classmethod
