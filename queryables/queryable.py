@@ -33,9 +33,11 @@ def save_cache():
         return
 
     try:
-        with open(CACHE_FILE, "w") as f:
+        with open(CACHE_FILE, "w", encoding='utf-8') as f:
             logging.debug(f"Saving cache: {cache}")
-            json.dump(cache, f, indent=2)
+            # Dumping directly into file can break a valid cache file
+            string = json.dumps(cache, ensure_ascii=False, indent=2)
+            f.write(string)
             logging.info(f"Saved cache")
     except Exception as e:
         logging.error(f"Exception ocurred while writing cache file: {e}")
