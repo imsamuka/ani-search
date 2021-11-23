@@ -8,16 +8,20 @@ class AnimeNSK_Packs(Queryable):
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
         entries = kwargs.get("entries", [])
-
         start = page * length
 
-        url = cls.END_POINT + "index.php"
-        params = {"Modo": "Busca", "find": query} if query else {
-            "Modo": "Packs", "bot": "Todos"}
+        content = cls.read_cache(query)
 
-        res = requests.get(url, params)
-        content = (res and (res.status_code == 200)
-                   and res.content) or "<html></html>"
+        if not content:
+            url = cls.END_POINT + "index.php"
+            params = {"Modo": "Busca", "find": query} if query else {
+                "Modo": "Packs", "bot": "Todos"}
+
+            res = requests.get(url, params)
+            content = str((res and (res.status_code == 200)
+                           and res.content) or "<html></html>")
+
+            cls.write_cache(query, content)
 
         trs = BeautifulSoup(content, 'html.parser').find_all(
             "tr", class_=re.compile(r"^L1$"))
@@ -30,7 +34,7 @@ class AnimeNSK_Packs(Queryable):
         if remaining < 0:
             remaining = 0
 
-        cls.log_response(res, page, total, remaining)
+        # cls.log_response(res, page, total, remaining)
 
         return {
             "entries": entries,
