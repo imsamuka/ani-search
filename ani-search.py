@@ -8,12 +8,13 @@ from rich.theme import Theme
 from rich.status import Status
 from rich import traceback
 
-from pathlib import Path
-import pathlib
+from os.path import dirname, realpath
 import json
 
 from queryables.queryable import Queryable, MissingCookiesError, ExpiredCookiesError
 from queryables import queryables_list, queryables_enum, queryables_dict
+
+CONFIG_FILE = dirname(realpath(__file__)) + "/config.json"
 
 config = {}
 rich_log = logging.getLogger("rich")
@@ -47,7 +48,7 @@ def search(
 
     # Read config file
     try:
-        with open("config.json", "r") as f:
+        with open(CONFIG_FILE, "r") as f:
             data = json.load(f)
             if not isinstance(data, dict):
                 raise Exception(
