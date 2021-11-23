@@ -58,6 +58,8 @@ class MDAN(Queryable):
         cls.raise_if_missing_cookies(cookies, {"pass", "hashv", "uid"})
 
         res = requests.get(url, params, cookies=cookies)
+        cls.log_response(res, page)
+
         content = (res and (res.status_code == 200)
                    and res.content) or "<html></html>"
         soup = BeautifulSoup(content, 'html.parser')
@@ -81,8 +83,6 @@ class MDAN(Queryable):
         # print("Requested site_page", site_page)
 
         if res is not None:
-            cls.log_response(res, page, total, remaining)
-
             # print(res.headers)
             # print(soup.prettify())
 

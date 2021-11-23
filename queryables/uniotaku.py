@@ -25,6 +25,8 @@ class Uniotaku(Queryable):
             "search[regex]": "false",
         }
         res = requests.get(url, params)
+        cls.log_response(res, page)
+
         j = (res and (res.status_code == 200) and res.json()) or {}
 
         entries = kwargs.get("entries", [])
@@ -38,8 +40,6 @@ class Uniotaku(Queryable):
         remaining = total - (start + showing)
         if remaining < 0:
             remaining = 0
-
-        cls.log_response(res, page, total, remaining)
 
         if all_pages and remaining:
             sleep(0.2)  # Avoid DDOS

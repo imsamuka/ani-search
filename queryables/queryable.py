@@ -96,13 +96,15 @@ class Queryable:
         return msg
 
     @classmethod
-    def log_response(cls, res: requests.Response, page: int, total: int, remaining: int) -> None:
-        if res.status_code == 200:
+    def log_response(cls, res: requests.Response, page: int) -> None:
+        if not res:
             cls.log(
-                logging.info, f"Requested page {page}: received {total} total entries with {remaining} remaining.")
+                logging.info, f"Requested (page {page}) Failed: Response object is {res}")
+        elif res.status_code == 200:
+            cls.log(logging.info, f"Requested (page {page}) Succeed.")
         else:
-            cls.log(logging.warning,
-                    f"Request failed: {res.reason} ({res.status_code}).")
+            cls.log(
+                logging.warning, f"Request (page {page}) Failed: {res.reason} ({res.status_code}).")
 
     @classmethod
     def raise_if_missing_cookies(cls, cookies, needed_cookies):

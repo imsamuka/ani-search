@@ -18,6 +18,8 @@ class AnimeNSK_Packs(Queryable):
                 "Modo": "Packs", "bot": "Todos"}
 
             res = requests.get(url, params)
+            cls.log_response(res, page)
+
             content = str((res and (res.status_code == 200)
                            and res.content) or "<html></html>")
 
@@ -33,8 +35,6 @@ class AnimeNSK_Packs(Queryable):
         remaining = total - (start + showing)
         if remaining < 0:
             remaining = 0
-
-        # cls.log_response(res, page, total, remaining)
 
         return {
             "entries": entries,

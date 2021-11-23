@@ -16,6 +16,8 @@ class Info_Anime(Queryable):
             url = cls.END_POINT + "/listageral"
 
             res = requests.get(url)
+            cls.log_response(res, page)
+
             content = (res and (res.status_code == 200)
                        and res.content) or "<html></html>"
             soup = BeautifulSoup(content, 'html.parser')
