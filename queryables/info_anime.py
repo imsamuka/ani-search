@@ -9,20 +9,26 @@ class Info_Anime(Queryable):
     def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
         entries = kwargs.get("entries", [])
         start = page * length
-        url = cls.END_POINT + "/listageral"
 
-        res = requests.get(url)
-        content = (res and (res.status_code == 200)
-                   and res.content) or "<html></html>"
-        soup = BeautifulSoup(content, 'html.parser')
+        links = cls.read_cache("all")
 
-        ul = soup.find(id="myUL")
-        all_links = ul.find_all("a", href=re.compile(r"^dados\?obra="))
-        # TODO: Cache this
-        link_gen = ((get_body(a), cls.END_POINT + get_href(a))
-                    for a in all_links)
+        if not links:
+            url = cls.END_POINT + "/listageral"
 
-        filtered = tuple(filter(lambda e: query in e[0].lower(), link_gen))
+            res = requests.get(url)
+            content = (res and (res.status_code == 200)
+                       and res.content) or "<html></html>"
+            soup = BeautifulSoup(content, 'html.parser')
+
+            ul = soup.find(id="myUL")
+            all_links = ul.find_all("a", href=re.compile(r"^dados\?obra="))
+
+            links = tuple((get_body(a), cls.END_POINT + get_href(a))
+                          for a in all_links)
+
+            cls.write_cache("all", links)
+
+        filtered = tuple(filter(lambda e: query in e[0].lower(), links))
         entries.extend(filtered[start:]
                        if all_pages else filtered[start:start+length])
 
