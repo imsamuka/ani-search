@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Used for testing
+*.http
+test.py
+
+# User Files
+config.json
+cache.json
