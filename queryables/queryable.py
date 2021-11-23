@@ -51,11 +51,17 @@ def open_cache(force: bool = False):
         return
 
     try:
-        with open(CACHE_FILE, "r") as f:
+        with open(CACHE_FILE, "r", encoding='utf-8') as f:
+            if not f.read().strip():
+                logging.info("Cache file is empty")
+                raise FileNotFoundError
+
+            f.seek(0)
             data = json.load(f)
 
             if isinstance(data, dict):
                 cache = data
+                logging.info("Opened Cache")
             else:
                 logging.warning(
                     f"Cache file is {type(data)} instead of {dict}. Ignoring it")
