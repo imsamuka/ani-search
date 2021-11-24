@@ -120,7 +120,7 @@ def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     s.update(f"[status]Requesting {cls.NAME()} data...")
 
-    data = cls.make_request(**kwargs, **config.get(cls.NAME(), {}))
+    data = cls.make_request(**kwargs, **config.get(cls.__name__, {}))
 
     if not isinstance(data, dict):
         raise Exception("make_request() didn't return a data structure.")
