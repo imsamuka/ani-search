@@ -38,6 +38,9 @@ class Info_Anime(Queryable):
         entries.extend(filtered[start:]
                        if all_pages else filtered[start:start+length])
 
+        if query:
+            entries.sort(key=lambda e: e[0].lower().find(query))
+
         total = len(filtered)
         showing = len(entries)
         remaining = total - (start + showing)

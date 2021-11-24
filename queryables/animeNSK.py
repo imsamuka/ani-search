@@ -33,6 +33,9 @@ class AnimeNSK_Packs(Queryable):
         entries[:] = entries[start:] if all_pages else entries[start:start+length]
         showing = len(entries)
 
+        if query:
+            entries.sort(key=lambda e: e["title"].lower().find(query))
+
         remaining = total - (start + showing)
         if remaining < 0:
             remaining = 0
