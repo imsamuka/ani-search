@@ -7,9 +7,7 @@ class Info_Anime(Queryable):
 
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
-        entries = kwargs.get("entries", [])
         start = page * length
-
         links = cls.read_cache("all")
 
         if not links:
@@ -18,9 +16,7 @@ class Info_Anime(Queryable):
             res = requests.get(url)
             cls.log_response(res, page)
 
-            content = (res and (res.status_code == 200)
-                       and res.content) or "<html></html>"
-            soup = BeautifulSoup(content, 'html.parser')
+            soup = get_res_soup(res)
 
             ul = soup.find(id="myUL")
             all_links = ul.find_all("a", href=re.compile(r"^dados\?obra="))
@@ -29,6 +25,8 @@ class Info_Anime(Queryable):
                      for a in all_links}
 
             cls.write_cache("all", links)
+
+        entries = kwargs.get("entries", [])
 
         if query:
             filtered = [l for l in links.items() if query in l[0].lower()]

@@ -54,15 +54,12 @@ class MDAN(Queryable):
         }
 
         cookies = kwargs.get("cookies", {})
-
         cls.raise_if_missing_cookies(cookies, {"pass", "hashv", "uid"})
 
         res = requests.get(url, params, cookies=cookies)
         cls.log_response(res, page)
 
-        content = (res and (res.status_code == 200)
-                   and res.content) or "<html></html>"
-        soup = BeautifulSoup(content, 'html.parser')
+        soup = get_res_soup(res)
 
         cls.raise_if_expired_cookies(
             soup.find("form", action="takelogin.php", id="login"))

@@ -27,7 +27,7 @@ class Uniotaku(Queryable):
         res = requests.get(url, params)
         cls.log_response(res, page)
 
-        j = (res and (res.status_code == 200) and res.json()) or {}
+        j = get_res_json(res)
 
         entries = kwargs.get("entries", [])
         entries.extend(j.get("data", ()))

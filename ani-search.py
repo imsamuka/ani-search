@@ -105,7 +105,7 @@ def search(
             if debug:
                 rich_log.exception(e)
             elif hasattr(cls, "NAME"):
-                print(f"{cls.NAME()} - {e}", justify="center")
+                print(f"{cls.NAME()} - Error: {e}", justify="center")
             else:
                 print(e, justify="center")
         if not debug:

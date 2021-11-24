@@ -17,11 +17,8 @@ class AnimeNSK_Packs(Queryable):
             res = requests.get(url, params)
             cls.log_response(res, page)
 
-            content = str((res and (res.status_code == 200)
-                           and res.content) or "<html></html>")
-
-            trs = BeautifulSoup(content, 'html.parser').find_all(
-                "tr", class_=re.compile(r"^L1$"))
+            soup = get_res_soup(res)
+            trs = soup.find_all("tr", class_=re.compile(r"^L1$"))
 
             entries = cls.parse_entries(trs)
             cls.write_cache("entries", entries)

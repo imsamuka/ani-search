@@ -18,6 +18,16 @@ cache = None
 def with_style(s, style): return f"[{style}]{s}[/]"
 
 
+def get_res_json(res: requests.Response) -> dict:
+    return (res and (res.status_code == 200) and res.json()) or {}
+
+
+def get_res_soup(res: requests.Response) -> BeautifulSoup:
+    content = (res and (res.status_code == 200)
+               and res.content) or "<html></html>"
+    return BeautifulSoup(content, 'html.parser')
+
+
 def get_tag(text, tag): return BeautifulSoup(text, 'html.parser').find(tag)
 def get_attr(tag, attr): return str((tag and tag.get(attr)) or "").strip()
 def get_href(tag): return get_attr(tag, "href")
@@ -118,6 +128,10 @@ class Queryable:
 
     @classmethod
     def raise_if_missing_cookies(cls, cookies, needed_cookies):
+        if not isinstance(needed_cookies, set):
+            logging.info(
+                f"needed_cookies is {type(needed_cookies)} instead of set")
+            return
         if not needed_cookies.issubset(cookies.keys()):
             _error = f"{cls.NAME()} - Unable to request: Missing cookies { needed_cookies.difference(cookies.keys()) }."
             raise MissingCookiesError(_error)
@@ -200,6 +214,36 @@ class Queryable:
         """ query is assumed to be lowercase and stripped """
         raise NotImplementedError(
             f"{cls.NAME()} - Internet Request has not yet been implemented.")
+
+        start = page * length
+
+        url = cls.END_POINT
+        params = {}
+        res = requests.get(url, params=params)
+        cls.log_response(res, page)
+
+        entries = kwargs.get("entries", [])
+
+        # j = get_res_json(res)
+        soup = get_res_soup(res)
+        trs = soup.find_all("tr", class_=re.compile(r"^CLASS$"))
+        # assiming trs is already filtered by query
+
+        entries.extend(trs[start:] if all_pages else trs[start:start+length])
+
+        total = len(trs)
+        showing = len(entries)
+        remaining = total - (start + showing)
+        if remaining < 0:
+            remaining = 0
+
+        return {
+            "entries": entries,
+            "start": kwargs.get("rec_start", start),
+            "showing": showing,
+            "remaining": remaining,
+            "total": total,
+        }
 
     @classmethod
     def parse_entries(cls, entries: list) -> list[dict]:
