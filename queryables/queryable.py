@@ -2,6 +2,7 @@ import logging
 import requests
 import re
 import json
+import datetime
 from os.path import dirname, realpath
 from bs4 import BeautifulSoup, Tag
 from rich.table import Table
@@ -10,6 +11,7 @@ from functools import reduce
 from math import ceil
 
 CACHE_FILE = dirname(dirname(realpath(__file__))) + "/cache.json"
+cache_hour_limit = 6
 cache = None
 
 
@@ -132,18 +134,10 @@ class Queryable:
         open_cache()
 
         logging.info(f"Writing cache['{cls.__name__}']['{key}']")
-        cache.setdefault(cls.__name__, {})[key] = value
+        time = datetime.datetime.today()
+        cache.setdefault(cls.__name__, {})[key] = (time.isoformat(), value)
 
         save_cache()
-
-    @classmethod
-    def parse_data(cls, data: dict) -> dict:
-        if data.get("parsed"):
-            logging.info("Data already parsed")
-            return data
-        data["entries"] = cls.parse_entries(data.get("entries", []))
-        data["parsed"] = True
-        return data
 
     @classmethod
     def read_cache(cls, key):
@@ -156,9 +150,42 @@ class Queryable:
 
         if cache and cls.__name__ in cache:
             logging.info(f"Getting cache['{cls.__name__}']['{key}']")
-            return cache.get(cls.__name__, {}).get(key)
+
+            time_s, value = cache.get(
+                cls.__name__, {}).get(key) or (None, None)
+
+            if time_s is None or value is None:
+                logging.info(f"cache doesn't exist or is invalid")
+                return
+
+            time = datetime.datetime.fromisoformat(time_s)
+            dt = datetime.datetime.today() - time
+
+            passed_hours = dt.seconds / 60 / 60
+            cache_seconds = cache_hour_limit * 60 * 60
+
+            logging.info(
+                f"passed {dt.seconds} seconds since cached ({passed_hours:.4f} hours)")
+
+            if dt.seconds < cache_seconds:
+                logging.info(
+                    f"cache still valid ({dt.seconds} < {cache_seconds}) seconds")
+                return value
+
+            logging.info(
+                f"cache no longer valid ({dt.seconds} > {cache_seconds}) seconds")
+            return
 
         logging.info(f"cache['{cls.__name__}'] doesn't exist")
+
+    @classmethod
+    def parse_data(cls, data: dict) -> dict:
+        if data.get("parsed"):
+            logging.info("Data already parsed")
+            return data
+        data["entries"] = cls.parse_entries(data.get("entries", []))
+        data["parsed"] = True
+        return data
 
     @classmethod
     def _Table(cls, data: dict) -> Table:

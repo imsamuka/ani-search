@@ -11,7 +11,8 @@ from rich import traceback
 from os.path import dirname, realpath
 import json
 
-from queryables.queryable import Queryable, MissingCookiesError, ExpiredCookiesError
+import queryables.queryable as qq
+from queryables.queryable import Queryable
 from queryables import queryables_list, queryables_enum, queryables_dict
 
 CONFIG_FILE = dirname(realpath(__file__)) + "/config.json"
@@ -71,6 +72,12 @@ def search(
         else:
             print('\n', e, '\n', justify="center")
 
+    if config.get("cache_hour_limit"):
+        logging.info(
+            f"Changing cache hour limit from {qq.cache_hour_limit} to {config.get('cache_hour_limit')}")
+        qq.cache_hour_limit = config.get(
+            'cache_hour_limit', qq.cache_hour_limit)
+
     # Select queryables to run
     cls = queryables_dict.get(cls and cls.value or "")
     cls_list = [cls] if cls else queryables_list
@@ -88,8 +95,8 @@ def search(
     for cls in cls_list:
         try:
             run_queryable(cls, s, query=query, all_pages=show_everything)
-        except (NotImplementedError, MissingCookiesError,
-                ExpiredCookiesError) as e:
+        except (NotImplementedError, qq.MissingCookiesError,
+                qq.ExpiredCookiesError) as e:
             if debug:
                 logging.error(e)
             else:
