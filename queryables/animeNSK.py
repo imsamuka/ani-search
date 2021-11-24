@@ -14,7 +14,7 @@ class AnimeNSK_Packs(Queryable):
             url = cls.END_POINT + "index.php"
             params = {"Modo": "Packs", "bot": "Todos"}
 
-            res = requests.get(url, params)
+            res = requests.get(url, {**params, **kwargs.get("params", {})})
             cls.log_response(res, page)
 
             soup = get_res_soup(res)

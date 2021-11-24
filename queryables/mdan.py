@@ -56,7 +56,8 @@ class MDAN(Queryable):
         cookies = kwargs.get("cookies", {})
         cls.raise_if_missing_cookies(cookies, {"pass", "hashv", "uid"})
 
-        res = requests.get(url, params, cookies=cookies)
+        res = requests.get(
+            url, {**params, **kwargs.get("params", {})}, cookies=cookies)
         cls.log_response(res, page)
 
         soup = get_res_soup(res)

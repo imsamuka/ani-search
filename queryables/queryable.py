@@ -219,7 +219,7 @@ class Queryable:
 
         url = cls.END_POINT
         params = {}
-        res = requests.get(url, params=params)
+        res = requests.get(url, {**params, **kwargs.get("params", {})})
         cls.log_response(res, page)
 
         entries = kwargs.get("entries", [])

@@ -13,7 +13,7 @@ class Info_Anime(Queryable):
         if not links:
             url = cls.END_POINT + "/listageral"
 
-            res = requests.get(url)
+            res = requests.get(url, kwargs.get("params", {}))
             cls.log_response(res, page)
 
             soup = get_res_soup(res)

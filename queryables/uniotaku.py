@@ -24,7 +24,7 @@ class Uniotaku(Queryable):
             "search[value]": query,
             "search[regex]": "false",
         }
-        res = requests.get(url, params)
+        res = requests.get(url, {**params, **kwargs.get("params", {})})
         cls.log_response(res, page)
 
         j = get_res_json(res)
