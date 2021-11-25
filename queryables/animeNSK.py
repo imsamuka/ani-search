@@ -125,14 +125,19 @@ class AnimeNSK_Torrent(Queryable):
 
             tr.extend(missing_tds)
 
+        SITE_PAGE_LENGTH = 15
+
         start = page * length
+        site_page = (start + kwargs.get("showing", 0)) // SITE_PAGE_LENGTH
+        site_start = 0 if ("rec_start" in kwargs) else start % SITE_PAGE_LENGTH
 
         url = cls.END_POINT + "browse.php"
         params = {
             "search": query,
+            "page": site_page,
 
             # (None, Seeders, Leechers, Size, Downloads, Date, Name)
-            "order": 4 if query else 0,
+            "order": 5 if query else 0,
 
             # Types:
             "c1": 1,  # Anime
@@ -165,14 +170,29 @@ class AnimeNSK_Torrent(Queryable):
             correct_first_tr(soup, trs[0])
 
         entries = kwargs.get("entries", [])
-        entries.extend(trs[start:] if all_pages else trs[start:start+length])
+        entries.extend(trs[site_start:])
+
+        if not all_pages:
+            del entries[length:]
 
         showing = len(entries)
-        total = search_total(soup) or showing
+        total = max(search_total(soup), len(trs), showing)
 
         remaining = total - (start + showing)
         if remaining < 0:
             remaining = 0
+
+        if res.status_code == 200 and remaining and (all_pages or showing < length):
+            sleep(0.1)  # Avoid DDOS
+
+            return cls.make_request(
+                query=query, all_pages=all_pages, page=page, length=length,
+                **{**kwargs,
+                    'entries': entries,
+                    'rec_start': kwargs.get("rec_start", start),
+                    'showing': showing,
+                   }
+            )
 
         return {
             "entries": entries,
