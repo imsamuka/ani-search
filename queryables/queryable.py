@@ -6,6 +6,7 @@ import datetime
 from os.path import dirname, realpath
 from bs4 import BeautifulSoup, Tag
 from rich.table import Table
+from rich.markup import escape
 from time import sleep
 from functools import reduce
 from math import ceil
@@ -15,7 +16,8 @@ cache_hour_limit = 6
 cache = None
 
 
-def with_style(s, style): return f"[{style}]{s}[/]"
+def with_style(s, style):
+    return f'[{style}]{escape(s)}[/]'
 
 
 def get_res_json(res: requests.Response) -> dict:

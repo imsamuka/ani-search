@@ -242,7 +242,10 @@ class AnimeNSK_Torrent(Queryable):
             }.get(cell['type'], "white")
 
             t.add_row(
-                with_style(cell['multiplier'], type_style) + cell['title'],
+                (
+                    with_style(cell['multiplier'], "indian_red1 bold") +
+                    cell['title']
+                ),
                 with_style(cell['type'], type_style),
                 cell['size'],
                 cell['page'],
