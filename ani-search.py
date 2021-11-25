@@ -125,42 +125,37 @@ def search(
 
 def run_queryable(cls: Queryable, s: Status, **kwargs):
 
-    if not cls or not issubclass(cls, Queryable):
-        raise Exception(f"{cls} is not a valid Queryable.")
+    assert (isinstance(cls, type) and
+            issubclass(cls, Queryable)), f"{cls} is not a valid Queryable."
 
     s.update(f"[status]Requesting {cls.NAME()} data...")
-
     data = cls.make_request(**kwargs, **config.get(cls.__name__, {}))
 
-    if not isinstance(data, dict):
-        raise Exception("make_request() didn't return a data structure.")
+    assert isinstance(data, dict), "make_request() didn't return data dict."
 
-    if not data:
-        raise Exception("make_request() returned a empty data structure.")
+    assert data, "make_request() returned empty a data dict."
 
-    if not isinstance(data.get("entries"), list):
-        raise Exception(
-            "make_request() didn't return a valid list of entries.")
+    assert isinstance(data.get("entries"), list), (
+        "make_request() didn't return a valid list of entries.")
 
-    cls.log(logging.debug,
-            f"data['entries'] = {data.setdefault('entries', {})}")
+    cls.log(logging.debug, f"data['entries'] = {data['entries']}")
     cls.log(logging.info, f"len(data['entries']) == {len(data['entries'])}")
-    cls.log(
-        logging.info,
-        f"data = {(lambda d: (d.pop('entries') or True) and d)(data.copy())}")
+    cls.log(logging.info,
+            f"data = {(lambda d: (d.pop('entries') or True) and d)(data.copy())}")
 
-    if not data.get("entries"):
-        raise Exception("0 entries found.")
+    assert data["entries"], "0 entries found."
 
     s.update(f"[status]Parsing {cls.NAME()} data...")
     data = cls.parse_data(data)
-    if not data["entries"]:
-        raise Exception("every entry was removed during parsing of data.")
+
+    assert data["entries"], "every entry was removed during parsing of data."
 
     cls.log(logging.debug, f"parsed data['entries'] = {data['entries']}")
 
     s.update(f"[status]Creating table for {cls.NAME()}...")
     table = cls.make_table(data)
+
+    assert table.row_count, "constructed table with no rows"
 
     print(table, justify="center")
 
