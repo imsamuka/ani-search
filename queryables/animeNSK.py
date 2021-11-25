@@ -89,6 +89,13 @@ class AnimeNSK_Torrent(Queryable):
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
 
+        def correct_first_tr(soup: BeautifulSoup, tr: Tag) -> Tag:
+            table_teste = soup.find("table", class_=re.compile(r"^teste$"))
+            cursed_tr = table_teste.find_all("tr", recursive=False)[1]
+            missing_tds = cursed_tr.find_all("td", recursive=False)[2:]
+
+            tr.extend(missing_tds)
+
         start = page * length
 
         url = cls.END_POINT + "browse.php"
@@ -124,6 +131,9 @@ class AnimeNSK_Torrent(Queryable):
         # logging.debug(soup.prettify())
 
         trs = soup.find_all("tr", id=re.compile(r"^trTorrentRow$"))
+
+        if trs:
+            correct_first_tr(soup, trs[0])
 
         entries = kwargs.get("entries", [])
         entries.extend(trs[start:] if all_pages else trs[start:start+length])
