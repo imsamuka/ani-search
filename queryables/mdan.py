@@ -74,11 +74,8 @@ class MDAN(Queryable):
             trs[sp_start:] if all_pages else trs[sp_start:sp_start+length])
 
         showing = len(entries)
-        total = search_total(soup, len(trs))
-
-        remaining = total - (start + showing)
-        if remaining < 0:
-            remaining = 0
+        total = max(search_total(soup, len(trs)), showing)
+        remaining = max(0, total - (start + showing))
 
         # print("Requested site_page", site_page)
 

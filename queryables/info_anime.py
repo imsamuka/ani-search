@@ -41,9 +41,7 @@ class Info_Anime(Queryable):
 
         total = len(filtered)
         showing = len(entries)
-        remaining = total - (start + showing)
-        if remaining < 0:
-            remaining = 0
+        remaining = max(0, total - (start + showing))
 
         return {
             "entries": entries,

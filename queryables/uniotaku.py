@@ -33,13 +33,8 @@ class Uniotaku(Queryable):
         entries.extend(j.get("data", ()))
         showing = len(entries)
 
-        total = j.get("recordsFiltered", 0)
-        if showing > total:
-            total = showing
-
-        remaining = total - (start + showing)
-        if remaining < 0:
-            remaining = 0
+        total = max(showing, j.get("recordsFiltered", 0))
+        remaining = max(0, total - (start + showing))
 
         if res.status_code == 200 and remaining and (all_pages or showing < length):
             sleep(0.1)  # Avoid DDOS

@@ -35,9 +35,7 @@ class AnimeNSK_Packs(Queryable):
         if query:
             entries.sort(key=lambda e: e["title"].lower().find(query))
 
-        remaining = total - (start + showing)
-        if remaining < 0:
-            remaining = 0
+        remaining = max(0, total - (start + showing))
 
         return {
             "entries": entries,
@@ -178,9 +176,7 @@ class AnimeNSK_Torrent(Queryable):
         showing = len(entries)
         total = max(search_total(soup), len(trs), showing)
 
-        remaining = total - (start + showing)
-        if remaining < 0:
-            remaining = 0
+        remaining = max(0, total - (start + showing))
 
         if res.status_code == 200 and remaining and (all_pages or showing < length):
             sleep(0.1)  # Avoid DDOS
