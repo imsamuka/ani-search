@@ -31,7 +31,7 @@ class Info_Anime(Queryable):
         if query:
             filtered = [l for l in links.items() if query in l[0].lower()]
         else:
-            filtered = [links.items()]
+            filtered = list(links.items())
 
         entries.extend(filtered[start:]
                        if all_pages else filtered[start:start+length])
