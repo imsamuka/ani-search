@@ -191,7 +191,7 @@ class MDAN(Queryable):
                 cell['title'],
                 with_style(cell['type'], type_style),
                 cell['size'],
-                cell['page'],
+                as_link(cell['page']),
                 style=style
             )
 

@@ -250,7 +250,7 @@ class AnimeNSK_Torrent(Queryable):
                 ),
                 with_style(cell['type'], type_style),
                 cell['size'],
-                cell['page'],
+                as_link(cell['page']),
                 style=style
             )
 

@@ -136,7 +136,7 @@ class Uniotaku(Queryable):
             t.add_row(
                 cell['title'],
                 with_style(cell['type'], type_style),
-                cell['page'],
+                as_link(cell['page']),
                 cell['size'],
                 cell['group_name'],
                 style=style,

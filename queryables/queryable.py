@@ -16,8 +16,8 @@ cache_hour_limit = 6
 cache = None
 
 
-def with_style(s, style):
-    return f'[{style}]{escape(s)}[/]'
+def with_style(s, style): return f'[{style}]{escape(s)}[/]'
+def as_link(link): return f'[link={link}]{escape(link)}[/]'
 
 
 def get_res_json(res: requests.Response) -> dict:
@@ -298,7 +298,7 @@ class Queryable:
                 cell['title'],
                 with_style(cell['type'], type_style),
                 cell['size'],
-                cell['page'],
+                as_link(cell['page']),
                 style=style
             )
 

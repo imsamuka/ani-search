@@ -73,7 +73,7 @@ class Info_Anime(Queryable):
         for cell in data['entries']:
             t.add_row(
                 cell['title'],
-                cell['page'],
+                as_link(cell['page']),
             )
 
         return t
