@@ -41,13 +41,15 @@ class Uniotaku(Queryable):
         if remaining < 0:
             remaining = 0
 
-        if all_pages and remaining:
-            sleep(0.2)  # Avoid DDOS
+        if res.status_code == 200 and remaining and (all_pages or showing < length):
+            sleep(0.1)  # Avoid DDOS
             return cls.make_request(
-                entries=entries,
-                rec_start=kwargs.get("rec_start", start),
                 page=page+1,
-                query=query, all_pages=all_pages, length=length
+                query=query, all_pages=all_pages, length=length,
+                **{**kwargs,
+                    'entries': entries,
+                    'rec_start': kwargs.get("rec_start", start),
+                   }
             )
 
         return {

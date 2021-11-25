@@ -82,18 +82,16 @@ class MDAN(Queryable):
 
         # print("Requested site_page", site_page)
 
-        if res is not None:
-            # print(res.headers)
-            # print(soup.prettify())
-
-            if all_pages and remaining:
-                sleep(0.2)  # Avoid DDOS
-                return cls.make_request(
-                    entries=entries,
-                    rec_start=kwargs.get("rec_start", start),
-                    page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
-                    query=query, all_pages=all_pages, length=length
-                )
+        if res.status_code == 200 and remaining and (all_pages or showing < length):
+            sleep(0.1)  # Avoid DDOS
+            return cls.make_request(
+                page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
+                query=query, all_pages=all_pages, length=length,
+                **{**kwargs,
+                    'entries': entries,
+                    'rec_start': kwargs.get("rec_start", start),
+                   }
+            )
 
         return {
             "entries": entries,
