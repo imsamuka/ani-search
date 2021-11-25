@@ -222,13 +222,12 @@ class Queryable:
         res = requests.get(url, {**params, **kwargs.get("params", {})})
         cls.log_response(res, page)
 
-        entries = kwargs.get("entries", [])
-
         # j = get_res_json(res)
         soup = get_res_soup(res)
         trs = soup.find_all("tr", class_=re.compile(r"^CLASS$"))
         # assiming trs is already filtered by query
 
+        entries = kwargs.get("entries", [])
         entries.extend(trs[start:] if all_pages else trs[start:start+length])
 
         total = len(trs)
@@ -271,6 +270,34 @@ class Queryable:
     @classmethod
     def make_table(cls, data: dict) -> Table:
         t = cls._Table(data)
+
         raise NotImplementedError(
             f"{cls.NAME()} - Table construction has not yet been implemented.")
+
+        t.add_column("Title")
+        t.add_column("Type", justify="center")
+        t.add_column("Size", justify="right", style="white")
+        t.add_column("Page Link", style="dim")
+
+        for entry in data['entries']:
+
+            style = ""
+            if cell['seeds'] == 0:
+                style += " dim"
+
+            type_style = {
+                "Episodes": "episodes",
+                "Complete": "complete",
+                "OVA": "special",
+                "Movie": "movie",
+            }.get(cell['type'], "white")
+
+            t.add_row(
+                cell['title'],
+                with_style(cell['type'], type_style),
+                cell['size'],
+                cell['page'],
+                style=style
+            )
+
         return t
