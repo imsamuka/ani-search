@@ -185,8 +185,8 @@ class AnimeNSK_Torrent(Queryable):
 
         t.add_column("Title")
         t.add_column("Type", justify="center")
-        t.add_column("Page Link", style="dim")
         t.add_column("Size", justify="right", style="white")
+        t.add_column("Page Link", style="dim")
 
         for cell in data['entries']:
 
@@ -203,8 +203,8 @@ class AnimeNSK_Torrent(Queryable):
             t.add_row(
                 with_style(cell['multiplier'], type_style) + cell['title'],
                 with_style(cell['type'], type_style),
-                cell['page'],
                 cell['size'],
+                cell['page'],
                 style=style
             )
 
