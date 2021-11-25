@@ -42,6 +42,7 @@ def search(
     show_everything: bool = False,
     debug: bool = False,
     cls: queryables_enum = None,
+    strip_http: bool = None
 ):
     query = query.strip().lower()
     if debug:
@@ -72,11 +73,20 @@ def search(
         else:
             print('\n', e, '\n', justify="center")
 
-    if config.get("cache_hour_limit"):
+    if config.get('cache_hour_limit'):
         logging.info(
             f"Changing cache hour limit from {qq.cache_hour_limit} to {config.get('cache_hour_limit')}")
         qq.cache_hour_limit = config.get(
             'cache_hour_limit', qq.cache_hour_limit)
+
+    if strip_http is not None:
+        logging.info(
+            f"Changing strip_http from {qq.strip_http} to {strip_http}")
+        qq.strip_http = strip_http
+    elif config.get('strip_http') is not None:
+        logging.info(
+            f"Changing strip_http from {qq.strip_http} to {config.get('strip_http')}")
+        qq.strip_http = config.get('strip_http')
 
     # Select queryables to run
     cls = queryables_dict.get(cls and cls.value or "")

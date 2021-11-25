@@ -21,9 +21,11 @@ _cache = None
 def with_style(s, style): return f'[{style}]{escape(s)}[/]'
 
 
-def as_link(link, strip_http=strip_http):
+def as_link(link, _strip_http: bool = None):
+    if _strip_http is None:
+        _strip_http = strip_http
     return '[link={}]{}[/link]'.format(link, escape(
-        re.sub(r"^(https?://)?(www\.)?", '', link) if strip_http else link))
+        re.sub(r"^(https?://)?(www\.)?", '', link) if _strip_http else link))
 
 
 def get_res_json(res: requests.Response) -> dict:
