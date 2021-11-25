@@ -206,6 +206,7 @@ class AnimeNSK_Torrent(Queryable):
                 "type": types.get(_type, _type),
                 "page": cls.END_POINT + get_href(tds[1].find("a")).replace("&hit=1", ""),
                 "multiplier": get_body(tds[1].find("font", color="red")),
+                "free_leech": get_body(tds[1].find("font", color="green")),
 
                 "size": get_body(tds[5]),
                 "seeds": as_int(get_body(tds[7])),
@@ -243,6 +244,7 @@ class AnimeNSK_Torrent(Queryable):
 
             t.add_row(
                 (
+                    with_style(cell['free_leech'], "spring_green3 bold") +
                     with_style(cell['multiplier'], "indian_red1 bold") +
                     cell['title']
                 ),
