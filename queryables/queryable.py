@@ -13,11 +13,17 @@ from math import ceil
 
 CACHE_FILE = dirname(dirname(realpath(__file__))) + "/cache.json"
 cache_hour_limit = 6
+strip_http = True
+
 cache = None
 
 
 def with_style(s, style): return f'[{style}]{escape(s)}[/]'
-def as_link(link): return f'[link={link}]{escape(link)}[/]'
+
+
+def as_link(link, strip_http=strip_http):
+    return '[link={}]{}[/link]'.format(link, escape(
+        re.sub(r"^(https?://)?(www\.)?", '', link) if strip_http else link))
 
 
 def get_res_json(res: requests.Response) -> dict:
