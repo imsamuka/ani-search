@@ -80,3 +80,132 @@ class AnimeNSK_Packs(Queryable):
             )
 
         return t
+
+
+class AnimeNSK_Torrent(Queryable):
+
+    END_POINT = "https://www.ansktracker.net/"
+
+    @classmethod
+    def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
+
+        start = page * length
+
+        url = cls.END_POINT + "browse.php"
+        params = {
+            "search": query,
+
+            # (None, Seeders, Leechers, Size, Downloads, Date, Name)
+            "order": 4 if query else 0,
+
+            # Types:
+            "c1": 1,  # Anime
+            "c2": 1,  # Anime OVA
+            "c3": 1,  # Anime Movie
+            # "c4": 1, # Doramas
+            # "c5": 1, # Music
+            # "c6": 1, # Others
+            # "mult": 1, # Multiplied Upload
+            # "freeleech": 1, # Free Leeching
+        }
+
+        cookies = kwargs.get("cookies", {})
+        cls.raise_if_missing_cookies(cookies, {"pass", "uid"})
+
+        res = requests.get(
+            url, {**params, **kwargs.get("params", {})}, cookies=cookies)
+        cls.log_response(res, page)
+
+        soup = get_res_soup(res)
+
+        cls.raise_if_expired_cookies(
+            soup.find("form", action="takelogin.php", method="post"))
+
+        # logging.debug(soup.prettify())
+
+        trs = soup.find_all("tr", id=re.compile(r"^trTorrentRow$"))
+
+        entries = kwargs.get("entries", [])
+        entries.extend(trs[start:] if all_pages else trs[start:start+length])
+
+        total = len(trs)
+        showing = len(entries)
+        remaining = total - (start + showing)
+        if remaining < 0:
+            remaining = 0
+
+        return {
+            "entries": entries,
+            "start": kwargs.get("rec_start", start),
+            "showing": showing,
+            "remaining": remaining,
+            "total": total,
+        }
+
+    @classmethod
+    def parse_entries(cls, entries: list) -> list[dict]:
+        new_entries = []
+
+        types = {"Anime TV": "Completo",
+                 "Anime OVA": "OVA",
+                 "Anime Movie": "Filme"}
+
+        for entry in entries:
+
+            tds = entry.find_all("td")
+            if len(tds) != 9:
+                cls.log(
+                    logging.warn, f"Skipping a entry with {len(tds)} columns instead of {9}")
+                continue
+
+            _type = get_attr(tds[0].find("img"), "alt")
+
+            new_entries.append({
+                "title": get_body(tds[1].find("a")),
+                "type": types.get(_type, _type),
+                "page": cls.END_POINT + get_href(tds[1].find("a")).replace("&hit=1", ""),
+                "multiplier": get_body(tds[1].find("font", color="red")),
+
+                "size": get_body(tds[5]),
+                "seeds": as_int(get_body(tds[7])),
+                "leechers": as_int(get_body(tds[8])),
+                "completions": as_int(get_body(tds[6])),
+                "archive_qtd": as_int(get_body(tds[2])),
+
+                # "seeders_list_link" : "",
+                # "leechers_list_link" : "",
+                # "archive_list_link" : cls.END_POINT + get_href(tds[4].find("a")),
+            })
+
+        return new_entries
+
+    @classmethod
+    def make_table(cls, data: dict) -> Table:
+        t = cls._Table(data)
+
+        t.add_column("Title")
+        t.add_column("Type", justify="center")
+        t.add_column("Page Link", style="dim")
+        t.add_column("Size", justify="right", style="white")
+
+        for cell in data['entries']:
+
+            style = ""
+            if cell['seeds'] == 0:
+                style += " dim"
+
+            type_style = {
+                "Completo": "complete",
+                "OVA": "special",
+                "Filme": "movie",
+            }.get(cell['type'], "white")
+
+            t.add_row(
+                with_style(cell['multiplier'], type_style) + cell['title'],
+                with_style(cell['type'], type_style),
+                cell['page'],
+                cell['size'],
+                style=style
+            )
+
+        return t

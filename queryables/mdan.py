@@ -63,7 +63,7 @@ class MDAN(Queryable):
         soup = get_res_soup(res)
 
         cls.raise_if_expired_cookies(
-            soup.find("form", action="takelogin.php", id="login"))
+            soup.find("form", action="takelogin.php", method="post"))
 
         trs = soup.find_all("tr", class_=re.compile(r"^browse_color$"))
 
@@ -129,12 +129,17 @@ class MDAN(Queryable):
         for cell in entries:
 
             tds = cell.find_all("td")
-            bs = tds[2].find_all("b") if 2 < len(tds) else ()
 
-            if len(tds) < 8:
-                logging.warning(
-                    f"{cls.NAME()} - Skipping a entry with {len(tds)} columns instead of {8}")
+            if len(tds) != 8:
+                cls.log(
+                    logging.warn, f"Skipping a entry with {len(tds)} columns instead of {8}")
+                logging.debug(cell)
                 continue
+
+            bs = tds[2].find_all("b")
+            if len(bs) != 2:
+                cls.log(logging.warn, f"Found a probably invalid entry")
+                logging.debug(cell)
 
             new_entries.append({
                 "title": get_body(tds[1].find("b")),
