@@ -91,33 +91,32 @@ class AnimeNSK_Torrent(Queryable):
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
-        def search_total(soup: BeautifulSoup, showing: int) -> int:
+        def search_total(soup: BeautifulSoup) -> int:
             table = soup.find("span", class_=re.compile(r"^pager$"))
             curr_pager = table and table.find(
                 "font", class_=re.compile(r"^gray$"))
 
             if not table or not curr_pager:
-                return showing  # not in a page, showing is probably 0
+                return 0  # not in a page?
+
+            def total_of(tag): return int(get_body(tag).split("-")[1])
 
             exp = re.compile(r"^\?.*page=(\d+).*")
-            pagers = table.find_all(href=exp)  # With page links
-            pagers = list(filter(lambda p: len(
-                get_body(p).split("-")) == 2, pagers))
+            pagers = table.find_all(href=exp)
+            pagers = pagers and list(
+                filter(lambda p: len(get_body(p).split("-")) == 2, pagers))
 
             # logging.debug(f"curr_pager: {curr_pager}")
             # logging.debug(f"pagers: {pagers}")
 
             if not pagers:
-                return showing  # there's only one page, total == showing
+                return total_of(curr_pager)  # there's only one page
 
-            def total_of(tag): return int(get_body(tag).split("-")[1])
             def search_last(a, b): return a if total_of(a) > total_of(b) else b
 
-            last_pager = reduce(search_last, pagers)
-            last_pager_total = total_of(last_pager)
-            curr_pager_total = total_of(curr_pager)
+            pagers.append(curr_pager)
 
-            return last_pager_total + (showing if last_pager_total <= curr_pager_total else 0)
+            return total_of(reduce(search_last, pagers))
 
         def correct_first_tr(soup: BeautifulSoup, tr: Tag) -> Tag:
             table_teste = soup.find("table", class_=re.compile(r"^teste$"))
@@ -169,7 +168,7 @@ class AnimeNSK_Torrent(Queryable):
         entries.extend(trs[start:] if all_pages else trs[start:start+length])
 
         showing = len(entries)
-        total = search_total(soup, showing)
+        total = search_total(soup) or showing
 
         remaining = total - (start + showing)
         if remaining < 0:

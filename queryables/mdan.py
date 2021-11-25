@@ -8,20 +8,22 @@ class MDAN(Queryable):
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
-        def search_total(soup: BeautifulSoup, showing: int) -> int:
+        def search_total(soup: BeautifulSoup, curr_page_qtd: int) -> int:
 
             table = soup.find("table", "main", align="center")
-            highlighted_pager = table and table.find("td", class_="highlight")
+            curr_pager = table and table.find("td", class_="highlight")
 
-            if not table or not highlighted_pager:
-                return showing  # not in a page, showing is probably 0
+            if not table or not curr_pager:
+                return curr_page_qtd  # not in a page, curr_page_qtd probably 0
 
             exp = re.compile(r"^browse\.php\?.*page=(\d+).*")
             pagers = table.find_all(
-                href=exp, title=lambda t: t and len(t.split("-")) == 2)
+                href=exp,
+                title=lambda t: t and len(t.split("-")) == 2
+            )
 
             if not pagers:
-                return showing  # there's only one page, total == showing
+                return curr_page_qtd  # there's only one page
 
             def pager_i(tag): return int(exp.search(tag.get("href")).group(1))
             def search_last(a, b): return a if pager_i(a) > pager_i(b) else b
@@ -30,9 +32,9 @@ class MDAN(Queryable):
             last_pager_total = int(last_pager.get("title").split("-")[1])
             last_pager_i = pager_i(last_pager)
 
-            current_pager_i = as_int(highlighted_pager.string) - 1
+            current_pager_i = as_int(curr_pager.string) - 1
 
-            return last_pager_total + (showing if last_pager_i <= current_pager_i else 0)
+            return last_pager_total + (curr_page_qtd if last_pager_i <= current_pager_i else 0)
 
         SITE_PAGE_LENGTH = 30
 
@@ -72,7 +74,7 @@ class MDAN(Queryable):
             trs[sp_start:] if all_pages else trs[sp_start:sp_start+length])
 
         showing = len(entries)
-        total = search_total(soup, showing)
+        total = search_total(soup, len(trs))
 
         remaining = total - (start + showing)
         if remaining < 0:
