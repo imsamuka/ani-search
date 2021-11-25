@@ -15,7 +15,7 @@ CACHE_FILE = dirname(dirname(realpath(__file__))) + "/cache.json"
 cache_hour_limit = 6
 strip_http = True
 
-cache = None
+_cache = None
 
 
 def with_style(s, style): return f'[{style}]{escape(s)}[/]'
@@ -46,17 +46,17 @@ def as_int(s): return int(re.sub(r"\D*", '', s) or 0)
 
 
 def save_cache():
-    global cache
+    global _cache
 
-    if cache is None or not cache:
+    if _cache is None or not _cache:
         logging.info("Tried to save empty Cache")
         return
 
     try:
         with open(CACHE_FILE, "w", encoding='utf-8') as f:
-            logging.debug(f"Saving cache: {cache}")
+            logging.debug(f"Saving cache: {_cache}")
             # Dumping directly into file can break a valid cache file
-            string = json.dumps(cache, ensure_ascii=False, indent=2)
+            string = json.dumps(_cache, ensure_ascii=False, indent=2)
             f.write(string)
             logging.info(f"Saved cache")
     except Exception as e:
@@ -64,9 +64,9 @@ def save_cache():
 
 
 def open_cache(force: bool = False):
-    global cache
+    global _cache
 
-    if not force and cache is not None:
+    if not force and _cache is not None:
         logging.info("Cache was opened already")
         return
 
@@ -80,7 +80,7 @@ def open_cache(force: bool = False):
             data = json.load(f)
 
             if isinstance(data, dict):
-                cache = data
+                _cache = data
                 logging.info("Opened Cache")
             else:
                 logging.warning(
@@ -92,9 +92,9 @@ def open_cache(force: bool = False):
     except Exception as e:
         logging.error(f"Exception ocurred while reading cache file: {e}")
 
-    if cache is None:
+    if _cache is None:
         logging.info("Creating empty Cache")
-        cache = {}
+        _cache = {}
 
 
 class MissingCookiesError(Exception):
@@ -152,28 +152,28 @@ class Queryable:
 
     @classmethod
     def write_cache(cls, key, value):
-        global cache
+        global _cache
         open_cache()
 
         logging.info(f"Writing cache['{cls.__name__}']['{key}']")
         time = datetime.datetime.today()
-        cache.setdefault(cls.__name__, {})[key] = (time.isoformat(), value)
+        _cache.setdefault(cls.__name__, {})[key] = (time.isoformat(), value)
 
         save_cache()
 
     @classmethod
     def read_cache(cls, key):
-        global cache
+        global _cache
         open_cache()
 
-        if not cache:
+        if not _cache:
             logging.info("Cache is empty")
             return
 
-        if cache and cls.__name__ in cache:
+        if _cache and cls.__name__ in _cache:
             logging.info(f"Getting cache['{cls.__name__}']['{key}']")
 
-            time_s, value = cache.get(
+            time_s, value = _cache.get(
                 cls.__name__, {}).get(key) or (None, None)
 
             if time_s is None or value is None:
