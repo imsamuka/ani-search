@@ -6,7 +6,7 @@ class MDAN(Queryable):
     END_POINT = "https://bt.mdan.org/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
+    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         def search_total(soup: BeautifulSoup, showing: int) -> int:
 

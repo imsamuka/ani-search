@@ -6,7 +6,7 @@ class AnimeNSK_Packs(Queryable):
     END_POINT = "https://packs.ansktracker.net/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
+    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         entries = cls.read_cache("entries") or []
         start = page * length
 

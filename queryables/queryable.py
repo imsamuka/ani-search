@@ -210,7 +210,7 @@ class Queryable:
         return t
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
+    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         """ query is assumed to be lowercase and stripped """
         raise NotImplementedError(
             f"{cls.NAME()} - Internet Request has not yet been implemented.")

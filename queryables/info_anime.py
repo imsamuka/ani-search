@@ -6,7 +6,7 @@ class Info_Anime(Queryable):
     END_POINT = "https://www.infoanime.com.br/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=25, **kwargs) -> dict:
+    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         start = page * length
         links = cls.read_cache("all")
 
