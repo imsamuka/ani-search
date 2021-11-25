@@ -8,18 +8,21 @@ class Uniotaku(Queryable):
     @classmethod
     def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
-        start = page * length
+        start = page * length + kwargs.get("rec_start", 0)
+
+        if all_pages and length != 1000:
+            length = 1000
+            page = 0
 
         url = cls.END_POINT + "torrents_.php"
         params = {
-            "draw": 0,
             "start": start,
             "length": length,
 
             # Filters
-            "categoria": 0,
-            "grupo": 0,
-            "status": 0,
+            # "categoria": 0,
+            # "grupo": 0,
+            # "status": 0,
             "ordenar": 7 if query else 0,  # Sort by More Completions
             "search[value]": query,
             "search[regex]": "false",
@@ -34,7 +37,7 @@ class Uniotaku(Queryable):
         showing = len(entries)
 
         total = max(showing, j.get("recordsFiltered", 0))
-        remaining = max(0, total - (start + showing))
+        remaining = max(0, total - (kwargs.get("rec_start", start) + showing))
 
         if res.status_code == 200 and remaining and (all_pages or showing < length):
             sleep(0.1)  # Avoid DDOS
