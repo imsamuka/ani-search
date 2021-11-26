@@ -129,7 +129,7 @@ def run_queryable(cls: Queryable, s: Status, **kwargs):
             issubclass(cls, Queryable)), f"{cls} is not a valid Queryable."
 
     s.update(f"[status]Requesting {cls.NAME()} data...")
-    data = cls.make_request(**kwargs, **config.get(cls.__name__, {}))
+    data = cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
 
     assert isinstance(data, dict), "make_request() didn't return data dict."
 
