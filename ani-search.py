@@ -138,8 +138,8 @@ def run_queryable(cls: Queryable, s: Status, **kwargs):
     assert isinstance(data.get("entries"), list), (
         "make_request() didn't return a valid list of entries.")
 
-    cls.log(logging.debug, f"data['entries'] = {data['entries']}")
-    cls.log(logging.info, f"len(data['entries']) == {len(data['entries'])}")
+    cls.log(logging.debug, f"{data['entries'] = }")
+    cls.log(logging.info, f"{len(data['entries']) = }")
     cls.log(logging.info,
             f"data = {(lambda d: (d.pop('entries') or True) and d)(data.copy())}")
 
@@ -150,7 +150,7 @@ def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     assert data["entries"], "every entry was removed during parsing of data."
 
-    cls.log(logging.debug, f"parsed data['entries'] = {data['entries']}")
+    cls.log(logging.debug, f"parsed {data['entries'] = }")
 
     s.update(f"[status]Creating table for {cls.NAME()}...")
     table = cls.make_table(data)

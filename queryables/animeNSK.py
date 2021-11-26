@@ -104,8 +104,8 @@ class AnimeNSK_Torrent(Queryable):
             pagers = pagers and list(
                 filter(lambda p: len(get_body(p).split("-")) == 2, pagers))
 
-            # logging.debug(f"curr_pager: {curr_pager}")
-            # logging.debug(f"pagers: {pagers}")
+            # logging.debug(f"{curr_pager = }")
+            # logging.debug(f"{pagers = }")
 
             if not pagers:
                 return total_of(curr_pager)  # there's only one page

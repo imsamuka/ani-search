@@ -56,7 +56,7 @@ def save_cache():
 
     try:
         with open(CACHE_FILE, "w", encoding='utf-8') as f:
-            logging.debug(f"Saving cache: {_cache}")
+            # logging.debug(f"Saving cache: {_cache}") # Too much info
             # Dumping directly into file can break a valid cache file
             string = json.dumps(_cache, ensure_ascii=False, indent=2)
             f.write(string)
