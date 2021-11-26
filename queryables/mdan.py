@@ -41,7 +41,7 @@ class MDAN(Queryable):
         start = page * length
         site_page = start // SITE_PAGE_LENGTH
 
-        sp_start = 0 if ("rec_start" in kwargs) else start % SITE_PAGE_LENGTH
+        site_start = 0 if ("rec_start" in kwargs) else start % SITE_PAGE_LENGTH
 
         url = cls.END_POINT + "browse.php"
         params = {
@@ -70,8 +70,10 @@ class MDAN(Queryable):
         trs = soup.find_all("tr", class_=re.compile(r"^browse_color$"))
 
         entries = kwargs.get("entries", [])
-        entries.extend(
-            trs[sp_start:] if all_pages else trs[sp_start:sp_start+length])
+        entries.extend(trs[site_start:])
+
+        if not all_pages:
+            del entries[length:]
 
         showing = len(entries)
         total = max(search_total(soup, len(trs)), showing)
