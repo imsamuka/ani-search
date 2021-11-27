@@ -10,6 +10,7 @@ from rich import traceback
 
 from os.path import dirname, realpath
 import json
+import asyncio
 
 import queryables.queryable as qq
 from queryables.queryable import Queryable
@@ -102,31 +103,41 @@ def search(
         s.start()
         print("\n" * 2)
 
-    for cls in cls_list:
-        try:
-            run_queryable(cls, s, query=query, all_pages=show_everything)
-        except (NotImplementedError, qq.MissingCookiesError,
-                qq.ExpiredCookiesError) as e:
-            if debug:
-                logging.error(e)
-            else:
-                print(e, justify="center")
-        except Exception as e:
-            if debug:
-                rich_log.exception(e)
-            elif hasattr(cls, "NAME"):
-                print(f"{cls.NAME()} - Error: {e}", justify="center")
-            else:
-                print(e, justify="center")
-        if not debug:
-            print("\n" * 2)
+    asyncio.run(gather_wrapper([
+        try_queryable(cls=cls, debug=debug, s=s,
+                      query=query, all_pages=show_everything)
+        for cls in cls_list]))
+
     s.stop()
 
 
-def run_queryable(cls: Queryable, s: Status, **kwargs):
+async def gather_wrapper(lst):
+    await asyncio.gather(*lst)
 
-    assert (isinstance(cls, type) and
-            issubclass(cls, Queryable)), f"{cls} is not a valid Queryable."
+
+async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):
+    if not (isinstance(cls, type) and issubclass(cls, Queryable)):
+        print(f"{cls} is not a valid Queryable.", justify="center")
+
+    try:
+        s.update(f"Starting {cls.NAME()}")
+        run_queryable(cls=cls, s=s, **kwargs)
+    except (NotImplementedError, qq.MissingCookiesError, qq.ExpiredCookiesError) as e:
+        if debug:
+            logging.error(e)
+        else:
+            print(e, justify="center")
+    except Exception as e:
+        if debug:
+            rich_log.exception(e)
+        else:
+            print(f"{cls.NAME()} - Error: {e}", justify="center")
+
+    if not debug:
+        print("\n" * 2)
+
+
+def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     s.update(f"[status]Requesting {cls.NAME()} data...")
     data = cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
