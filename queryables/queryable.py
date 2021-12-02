@@ -10,6 +10,7 @@ from rich.markup import escape
 from time import sleep
 from functools import reduce
 from math import ceil
+import asyncio
 
 CACHE_FILE = dirname(dirname(realpath(__file__))) + "/cache.json"
 cache_hour_limit = 6
@@ -220,7 +221,7 @@ class Queryable:
         return t
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         """ query is assumed to be lowercase and stripped """
         raise NotImplementedError(
             f"{cls.NAME()} - Internet Request has not yet been implemented.")

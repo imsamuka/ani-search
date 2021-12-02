@@ -6,15 +6,16 @@ class AnimeNSK_Packs(Queryable):
     END_POINT = "https://packs.ansktracker.net/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         entries = cls.read_cache("entries") or []
         start = page * length
 
         if not entries:
             url = cls.END_POINT + "index.php"
-            params = {"Modo": "Packs", "bot": "Todos"}
+            params = {"Modo": "Packs", "bot": "Todos",
+                      **kwargs.get("params", {})}
 
-            res = requests.get(url, {**params, **kwargs.get("params", {})})
+            res = requests.get(url=url, params=params)
             cls.log_response(res, page)
 
             soup = get_res_soup(res)
@@ -87,7 +88,7 @@ class AnimeNSK_Torrent(Queryable):
     END_POINT = "https://www.ansktracker.net/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         def search_total(soup: BeautifulSoup) -> int:
             table = soup.find("span", class_=re.compile(r"^pager$"))
@@ -181,7 +182,7 @@ class AnimeNSK_Torrent(Queryable):
         if res.status_code == 200 and remaining and (all_pages or showing < length):
             sleep(0.1)  # Avoid DDOS
 
-            return cls.make_request(
+            return await cls.make_request(
                 query=query, all_pages=all_pages, page=page, length=length,
                 **{**kwargs,
                     'entries': entries,

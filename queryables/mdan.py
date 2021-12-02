@@ -6,7 +6,7 @@ class MDAN(Queryable):
     END_POINT = "https://bt.mdan.org/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         def search_total(soup: BeautifulSoup, curr_page_qtd: int) -> int:
 
@@ -83,7 +83,7 @@ class MDAN(Queryable):
 
         if res.status_code == 200 and remaining and (all_pages or showing < length):
             sleep(0.1)  # Avoid DDOS
-            return cls.make_request(
+            return await cls.make_request(
                 page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
                 query=query, all_pages=all_pages, length=length,
                 **{**kwargs,

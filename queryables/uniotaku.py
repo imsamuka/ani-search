@@ -6,7 +6,7 @@ class Uniotaku(Queryable):
     END_POINT = "https://tracker.uniotaku.com/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         start = page * length + kwargs.get("rec_start", 0)
 
@@ -41,7 +41,7 @@ class Uniotaku(Queryable):
 
         if res.status_code == 200 and remaining and (all_pages or showing < length):
             sleep(0.1)  # Avoid DDOS
-            return cls.make_request(
+            return await cls.make_request(
                 page=page+1,
                 query=query, all_pages=all_pages, length=length,
                 **{**kwargs,

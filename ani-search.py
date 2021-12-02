@@ -121,7 +121,7 @@ async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):
 
     try:
         s.update(f"Starting {cls.NAME()}")
-        run_queryable(cls=cls, s=s, **kwargs)
+        await run_queryable(cls=cls, s=s, **kwargs)
     except (NotImplementedError, qq.MissingCookiesError, qq.ExpiredCookiesError) as e:
         if debug:
             logging.error(e)
@@ -137,10 +137,10 @@ async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):
         print("\n" * 2)
 
 
-def run_queryable(cls: Queryable, s: Status, **kwargs):
+async def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     s.update(f"[status]Requesting {cls.NAME()} data...")
-    data = cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
+    data = await cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
 
     assert isinstance(data, dict), "make_request() didn't return data dict."
 

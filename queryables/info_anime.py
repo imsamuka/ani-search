@@ -6,14 +6,14 @@ class Info_Anime(Queryable):
     END_POINT = "https://www.infoanime.com.br/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         start = page * length
         links = cls.read_cache("all")
 
         if not links:
             url = cls.END_POINT + "/listageral"
 
-            res = requests.get(url, kwargs.get("params", {}))
+            res = requests.get(url=url, params=kwargs.get("params", {}))
             cls.log_response(res, page)
 
             soup = get_res_soup(res)
