@@ -16,7 +16,7 @@ class AnimeNSK_Packs(Queryable):
                       **kwargs.get("params", {})}
 
             async with session.get(url=url, params=params) as res:
-                # cls.log_response(res, page)
+                cls.log_response(res)
 
                 content = (res.ok and await res.text()) or ""
                 soup = BeautifulSoup(content, 'html.parser')
@@ -155,7 +155,7 @@ class AnimeNSK_Torrent(Queryable):
         cls.raise_if_missing_cookies(cookies, {"pass", "uid"})
 
         async with session.get(url=url, params=params, cookies=cookies) as res:
-            # cls.log_response(res, page)
+            cls.log_response(res)
             content = (res.ok and await res.text()) or ""
             soup = BeautifulSoup(content, 'html.parser')
 

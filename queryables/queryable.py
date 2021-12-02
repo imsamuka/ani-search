@@ -128,15 +128,13 @@ class Queryable:
         return msg
 
     @classmethod
-    def log_response(cls, res: requests.Response, page: int) -> None:
+    def log_response(cls, res: aiohttp.ClientResponse) -> None:
         if not res:
-            cls.log(
-                logging.info, f"Requested (page {page}) Failed: Response object is {res}")
-        elif res.status_code == 200:
-            cls.log(logging.info, f"Requested (page {page}) Succeed.")
+            cls.log(logging.warn, f"Request Failed: Response object is {res}")
         else:
-            cls.log(
-                logging.warning, f"Request (page {page}) Failed: {res.reason} ({res.status_code}).")
+            cls.log(logging.info if res.ok else logging.warn,
+                    f"Requested URL with response: {res.reason} ({res.status})" +
+                    f"\n{res.url}")
 
     @classmethod
     def raise_if_missing_cookies(cls, cookies, needed_cookies):
@@ -232,7 +230,7 @@ class Queryable:
         url = cls.END_POINT
         params = {}
         res = requests.get(url, {**params, **kwargs.get("params", {})})
-        cls.log_response(res, page)
+        cls.log_response(res)
 
         # j = get_res_json(res)
         soup = get_res_soup(res)

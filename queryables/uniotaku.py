@@ -30,7 +30,7 @@ class Uniotaku(Queryable):
         }
 
         async with session.get(url=url, params=params) as res:
-            # cls.log_response(res, page)
+            cls.log_response(res)
             j = (res.ok and await res.json(content_type=None)) or {}
 
         entries = kwargs.get("entries", [])
