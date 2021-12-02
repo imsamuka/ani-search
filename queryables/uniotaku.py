@@ -6,7 +6,7 @@ class Uniotaku(Queryable):
     END_POINT = "https://tracker.uniotaku.com/"
 
     @classmethod
-    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         start = page * length + kwargs.get("rec_start", 0)
 
@@ -26,11 +26,12 @@ class Uniotaku(Queryable):
             "ordenar": 7 if query else 0,  # Sort by More Completions
             "search[value]": query,
             "search[regex]": "false",
+            **kwargs.get("params", {})
         }
-        res = requests.get(url, {**params, **kwargs.get("params", {})})
-        cls.log_response(res, page)
 
-        j = get_res_json(res)
+        async with session.get(url=url, params=params) as res:
+            # cls.log_response(res, page)
+            j = (res.ok and await res.json(content_type=None)) or {}
 
         entries = kwargs.get("entries", [])
         entries.extend(j.get("data", ()))
@@ -39,16 +40,18 @@ class Uniotaku(Queryable):
         total = max(showing, j.get("recordsFiltered", 0))
         remaining = max(0, total - (kwargs.get("rec_start", start) + showing))
 
-        if res.status_code == 200 and remaining and (all_pages or showing < length):
-            sleep(0.1)  # Avoid DDOS
-            return await cls.make_request(
-                page=page+1,
-                query=query, all_pages=all_pages, length=length,
-                **{**kwargs,
-                    'entries': entries,
-                    'rec_start': kwargs.get("rec_start", start),
-                   }
-            )
+        # Instead of Recursion, should use async tasks
+        #
+        # if res.status == 200 and remaining and (all_pages or showing < length):
+        #     sleep(0.1)  # Avoid DDOS
+        #     return await cls.make_request(
+        #         page=page+1,
+        #         query=query, all_pages=all_pages, length=length,
+        #         **{**kwargs,
+        #             'entries': entries,
+        #             'rec_start': kwargs.get("rec_start", start),
+        #            }
+        #     )
 
         return {
             "entries": entries,

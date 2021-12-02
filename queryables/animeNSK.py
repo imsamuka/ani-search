@@ -18,7 +18,7 @@ class AnimeNSK_Packs(Queryable):
             async with session.get(url=url, params=params) as res:
                 # cls.log_response(res, page)
 
-                content = (res.status == 200 and await res.text()) or ""
+                content = (res.ok and await res.text()) or ""
                 soup = BeautifulSoup(content, 'html.parser')
                 trs = soup.find_all("tr", class_=re.compile(r"^L1$"))
 
@@ -89,7 +89,7 @@ class AnimeNSK_Torrent(Queryable):
     END_POINT = "https://www.ansktracker.net/"
 
     @classmethod
-    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         def search_total(soup: BeautifulSoup) -> int:
             table = soup.find("span", class_=re.compile(r"^pager$"))
@@ -148,16 +148,16 @@ class AnimeNSK_Torrent(Queryable):
             # "c6": 1, # Others
             # "mult": 1, # Multiplied Upload
             # "freeleech": 1, # Free Leeching
+            **kwargs.get("params", {})
         }
 
         cookies = kwargs.get("cookies", {})
         cls.raise_if_missing_cookies(cookies, {"pass", "uid"})
 
-        res = requests.get(
-            url, {**params, **kwargs.get("params", {})}, cookies=cookies)
-        cls.log_response(res, page)
-
-        soup = get_res_soup(res)
+        async with session.get(url=url, params=params, cookies=cookies) as res:
+            # cls.log_response(res, page)
+            content = (res.ok and await res.text()) or ""
+            soup = BeautifulSoup(content, 'html.parser')
 
         cls.raise_if_expired_cookies(
             soup.find("form", action="takelogin.php", method="post"))
@@ -180,17 +180,19 @@ class AnimeNSK_Torrent(Queryable):
 
         remaining = max(0, total - (start + showing))
 
-        if res.status_code == 200 and remaining and (all_pages or showing < length):
-            sleep(0.1)  # Avoid DDOS
+        # Instead of Recursion, should use async tasks
+        #
+        # if res.status_code == 200 and remaining and (all_pages or showing < length):
+        #     sleep(0.1)  # Avoid DDOS
 
-            return await cls.make_request(
-                query=query, all_pages=all_pages, page=page, length=length,
-                **{**kwargs,
-                    'entries': entries,
-                    'rec_start': kwargs.get("rec_start", start),
-                    'showing': showing,
-                   }
-            )
+        #     return await cls.make_request(
+        #         query=query, all_pages=all_pages, page=page, length=length,
+        #         **{**kwargs,
+        #             'entries': entries,
+        #             'rec_start': kwargs.get("rec_start", start),
+        #             'showing': showing,
+        #            }
+        #     )
 
         return {
             "entries": entries,

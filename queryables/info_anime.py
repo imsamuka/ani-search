@@ -17,7 +17,7 @@ class Info_Anime(Queryable):
             async with session.get(url=url, params=params) as res:
                 # cls.log_response(res, page)
 
-                content = (res.status == 200 and await res.text()) or ""
+                content = (res.ok and await res.text()) or ""
                 soup = BeautifulSoup(content, 'html.parser')
 
                 ul = soup.find(id="myUL")
