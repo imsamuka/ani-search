@@ -6,7 +6,7 @@ class MDAN(Queryable):
     END_POINT = "https://bt.mdan.org/"
 
     @classmethod
-    def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
 
         def search_total(soup: BeautifulSoup, curr_page_qtd: int) -> int:
 
@@ -53,16 +53,16 @@ class MDAN(Queryable):
             "incldead": 0,  # No dead torrents
             # "only_free":1, # Salva-ratio
             # "only_silver":2, # Silver
+            **kwargs.get("params", {})
         }
 
         cookies = kwargs.get("cookies", {})
         cls.raise_if_missing_cookies(cookies, {"pass", "hashv", "uid"})
 
-        res = requests.get(
-            url, {**params, **kwargs.get("params", {})}, cookies=cookies)
-        cls.log_response(res, page)
-
-        soup = get_res_soup(res)
+        async with session.get(url=url, params=params, cookies=cookies) as res:
+            # cls.log_response(res, page)
+            content = (res.ok and await res.text()) or ""
+            soup = BeautifulSoup(content, 'html.parser')
 
         cls.raise_if_expired_cookies(
             soup.find("form", action="takelogin.php", method="post"))
@@ -81,16 +81,18 @@ class MDAN(Queryable):
 
         # print("Requested site_page", site_page)
 
-        if res.status_code == 200 and remaining and (all_pages or showing < length):
-            sleep(0.1)  # Avoid DDOS
-            return cls.make_request(
-                page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
-                query=query, all_pages=all_pages, length=length,
-                **{**kwargs,
-                    'entries': entries,
-                    'rec_start': kwargs.get("rec_start", start),
-                   }
-            )
+        # Instead of Recursion, should use async tasks
+        #
+        # if res.status_code == 200 and remaining and (all_pages or showing < length):
+        #     sleep(0.1)  # Avoid DDOS
+        #     return await cls.make_request(
+        #         page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
+        #         query=query, all_pages=all_pages, length=length,
+        #         **{**kwargs,
+        #             'entries': entries,
+        #             'rec_start': kwargs.get("rec_start", start),
+        #            }
+        #     )
 
         return {
             "entries": entries,

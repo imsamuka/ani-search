@@ -10,6 +10,8 @@ from rich import traceback
 
 from os.path import dirname, realpath
 import json
+import asyncio
+import aiohttp
 
 import queryables.queryable as qq
 from queryables.queryable import Queryable
@@ -102,34 +104,46 @@ def search(
         s.start()
         print("\n" * 2)
 
-    for cls in cls_list:
-        try:
-            run_queryable(cls, s, query=query, all_pages=show_everything)
-        except (NotImplementedError, qq.MissingCookiesError,
-                qq.ExpiredCookiesError) as e:
-            if debug:
-                logging.error(e)
-            else:
-                print(e, justify="center")
-        except Exception as e:
-            if debug:
-                rich_log.exception(e)
-            elif hasattr(cls, "NAME"):
-                print(f"{cls.NAME()} - Error: {e}", justify="center")
-            else:
-                print(e, justify="center")
-        if not debug:
-            print("\n" * 2)
+    asyncio.run(
+        tryq_wrapper(cls_list, debug=debug, s=s,
+                     query=query, all_pages=show_everything))
+
     s.stop()
 
 
-def run_queryable(cls: Queryable, s: Status, **kwargs):
+async def tryq_wrapper(cls_list, **kwargs):
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(*[
+            try_queryable(cls=cls, session=session, **kwargs)
+            for cls in cls_list])
 
-    assert (isinstance(cls, type) and
-            issubclass(cls, Queryable)), f"{cls} is not a valid Queryable."
+
+async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):
+    if not (isinstance(cls, type) and issubclass(cls, Queryable)):
+        print(f"{cls} is not a valid Queryable.", justify="center")
+
+    try:
+        s.update(f"Starting {cls.NAME()}")
+        await run_queryable(cls=cls, s=s, **kwargs)
+    except (NotImplementedError, qq.MissingCookiesError, qq.ExpiredCookiesError) as e:
+        if debug:
+            logging.error(e)
+        else:
+            print(e, justify="center")
+    except Exception as e:
+        if debug:
+            rich_log.exception(e)
+        else:
+            print(f"{cls.NAME()} - Error: {e}", justify="center")
+
+    if not debug:
+        print("\n" * 2)
+
+
+async def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     s.update(f"[status]Requesting {cls.NAME()} data...")
-    data = cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
+    data = await cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
 
     assert isinstance(data, dict), "make_request() didn't return data dict."
 
