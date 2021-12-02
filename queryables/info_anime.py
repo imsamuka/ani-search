@@ -8,23 +8,25 @@ class Info_Anime(Queryable):
     @classmethod
     async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
         start = page * length
-        links = cls.read_cache("all")
+        links = cls.read_cache("all") or {}
 
         if not links:
             url = cls.END_POINT + "/listageral"
+            params = kwargs.get("params", {})
 
-            res = requests.get(url=url, params=kwargs.get("params", {}))
-            cls.log_response(res, page)
+            async with aiohttp.request("GET", url=url, params=params) as res:
+                # cls.log_response(res, page)
 
-            soup = get_res_soup(res)
+                content = (res.status == 200 and await res.text()) or ""
+                soup = BeautifulSoup(content, 'html.parser')
 
-            ul = soup.find(id="myUL")
-            all_links = ul.find_all("a", href=re.compile(r"^dados\?obra="))
+                ul = soup.find(id="myUL")
+                all_links = ul.find_all("a", href=re.compile(r"^dados\?obra="))
 
-            links = {get_body(a): cls.END_POINT + get_href(a)
-                     for a in all_links}
+                links = {get_body(a): cls.END_POINT + get_href(a)
+                         for a in all_links}
 
-            cls.write_cache("all", links)
+                cls.write_cache("all", links)
 
         entries = kwargs.get("entries", [])
 

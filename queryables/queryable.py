@@ -11,6 +11,7 @@ from time import sleep
 from functools import reduce
 from math import ceil
 import asyncio
+import aiohttp
 
 CACHE_FILE = dirname(dirname(realpath(__file__))) + "/cache.json"
 cache_hour_limit = 6

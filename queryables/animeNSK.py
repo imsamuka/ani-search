@@ -15,14 +15,15 @@ class AnimeNSK_Packs(Queryable):
             params = {"Modo": "Packs", "bot": "Todos",
                       **kwargs.get("params", {})}
 
-            res = requests.get(url=url, params=params)
-            cls.log_response(res, page)
+            async with aiohttp.request("GET", url=url, params=params) as res:
+                # cls.log_response(res, page)
 
-            soup = get_res_soup(res)
-            trs = soup.find_all("tr", class_=re.compile(r"^L1$"))
+                content = (res.status == 200 and await res.text()) or ""
+                soup = BeautifulSoup(content, 'html.parser')
+                trs = soup.find_all("tr", class_=re.compile(r"^L1$"))
 
-            entries = cls.parse_entries(trs)
-            cls.write_cache("entries", entries)
+                entries = cls.parse_entries(trs)
+                cls.write_cache("entries", entries)
 
         if query:
             entries[:] = [e for e in entries if query in e["title"].lower()]
