@@ -11,7 +11,7 @@ from rich import traceback
 from os.path import dirname, realpath
 import json
 import asyncio
-import aiohttp
+from aiohttp import ClientSession
 
 import queryables.queryable as qq
 from queryables.queryable import Queryable
@@ -98,33 +98,33 @@ def search(
         print("No queryables to run")
         return
 
-    s = c.status("[status]Starting", spinner="bouncingBar")
+    status = c.status("[status]Starting", spinner="bouncingBar")
 
     if not debug:
-        s.start()
+        status.start()
         print("\n" * 2)
 
     asyncio.run(
-        tryq_wrapper(cls_list, debug=debug, s=s,
+        tryq_wrapper(cls_list, debug=debug, status=status,
                      query=query, all_pages=show_everything))
 
-    s.stop()
+    status.stop()
 
 
 async def tryq_wrapper(cls_list, **kwargs):
-    async with aiohttp.ClientSession() as session:
+    async with ClientSession() as session:
         await asyncio.gather(*[
             try_queryable(cls=cls, session=session, **kwargs)
             for cls in cls_list])
 
 
-async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):
+async def try_queryable(cls: Queryable, debug: bool, status: Status, **kwargs):
     if not (isinstance(cls, type) and issubclass(cls, Queryable)):
         print(f"{cls} is not a valid Queryable.", justify="center")
 
     try:
-        s.update(f"Starting {cls.NAME()}")
-        await run_queryable(cls=cls, s=s, **kwargs)
+        status.update(f"Starting {cls.NAME()}")
+        await run_queryable(cls=cls, status=status, **kwargs)
     except (NotImplementedError, qq.MissingCookiesError, qq.ExpiredCookiesError) as e:
         if debug:
             logging.error(e)
@@ -140,9 +140,9 @@ async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):
         print("\n" * 2)
 
 
-async def run_queryable(cls: Queryable, s: Status, **kwargs):
+async def run_queryable(cls: Queryable, status: Status, **kwargs):
 
-    s.update(f"[status]Requesting {cls.NAME()} data...")
+    status.update(f"[status]Requesting {cls.NAME()} data...")
     data = await cls.make_request(**{**kwargs, **config.get(cls.__name__, {})})
 
     assert isinstance(data, dict), "make_request() didn't return data dict."
@@ -159,14 +159,14 @@ async def run_queryable(cls: Queryable, s: Status, **kwargs):
 
     assert data["entries"], "0 entries found."
 
-    s.update(f"[status]Parsing {cls.NAME()} data...")
+    status.update(f"[status]Parsing {cls.NAME()} data...")
     data = cls.parse_data(data)
 
     assert data["entries"], "every entry was removed during parsing of data."
 
     cls.log(logging.debug, f"parsed {data['entries'] = }")
 
-    s.update(f"[status]Creating table for {cls.NAME()}...")
+    status.update(f"[status]Creating table for {cls.NAME()}...")
     table = cls.make_table(data)
 
     assert table.row_count, "constructed table with no rows"
