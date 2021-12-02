@@ -13,6 +13,10 @@ import asyncio
 import aiohttp
 
 CACHE_FILE = dirname(dirname(realpath(__file__))) + "/cache.json"
+MAX_SYNC_REQUESTS = 5
+MIN_TESTS = 2
+RECURSIVE_DELAY = 0.5
+
 cache_hour_limit = 6
 strip_http = True
 
@@ -36,6 +40,10 @@ def get_body(tag): return str((tag and tag.string) or "").strip()
 
 
 def as_int(s): return int(re.sub(r"\D*", '', s) or 0)
+
+
+def ceildiv(a, b):
+    return -(a // -b)
 
 
 def save_cache():

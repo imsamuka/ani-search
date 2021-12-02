@@ -38,16 +38,20 @@ class MDAN(Queryable):
 
         SITE_PAGE_LENGTH = 30
 
-        start = page * length
-        site_page = start // SITE_PAGE_LENGTH
-
-        site_start = 0 if ("rec_start" in kwargs) else start % SITE_PAGE_LENGTH
+        data = {
+            "entries": [],
+            "start": page * length,
+            "showing": 0,
+            "remaining": 0,
+            "total": 0,
+            **kwargs.get("data", {})
+        }
 
         url = cls.END_POINT + "browse.php"
         params = {
             "cats1[]": [1, 2, 5],  # Animes
             "cats2[]": 3,  # Movies
-            "page": site_page,
+            "page": 0,
             "search": query,
             "searchin": "title" or "all",  # Maybe set as kwargs option
             "incldead": 0,  # No dead torrents
@@ -59,48 +63,66 @@ class MDAN(Queryable):
         cookies = kwargs.get("cookies", {})
         cls.raise_if_missing_cookies(cookies, {"pass", "hashv", "uid"})
 
-        async with session.get(url=url, params=params, cookies=cookies) as res:
-            cls.log_response(res)
-            content = (res.ok and await res.text()) or ""
-            soup = BeautifulSoup(content, 'html.parser')
+        fails = 0
 
-        cls.raise_if_expired_cookies(
-            soup.find("form", action="takelogin.php", method="post"))
+        site_page_start = (data['start'] + data['showing']) // SITE_PAGE_LENGTH
 
-        trs = soup.find_all("tr", class_=re.compile(r"^browse_color$"))
+        async def get_page_trs(i: int):
+            nonlocal fails
+            params['page'] = site_page_start + i
 
-        entries = kwargs.get("entries", [])
-        entries.extend(trs[site_start:])
+            async with session.get(url=url, params=params, cookies=cookies) as res:
+                cls.log_response(res)
+                content = (res.ok and await res.read()) or ""
+                soup = BeautifulSoup(content, 'html.parser')
 
+                cls.raise_if_expired_cookies(
+                    soup.find("form", action="takelogin.php", method="post"))
+
+                # logging.debug(soup.prettify())
+                fails += not res.ok
+
+                trs = soup.find_all("tr", class_=re.compile(r"^browse_color$"))
+
+                # Since a request can fail, get maximum value for all
+                data['total'] = max(
+                    data['total'], search_total(soup, len(trs)))
+
+                return trs
+
+        if all_pages:
+            needed = ceildiv(data['remaining'], SITE_PAGE_LENGTH) or MIN_TESTS
+        else:
+            needed = ceildiv(length - data['showing'], SITE_PAGE_LENGTH)
+
+        needed = min(needed, MAX_SYNC_REQUESTS)
+
+        for trs in await asyncio.gather(*[get_page_trs(i) for i in range(needed)]):
+            data['entries'].extend(trs)
+
+        # If is the first recursive iteration - remove what is before start
+        if not 'data' in kwargs:
+            del data['entries'][:data['start'] % SITE_PAGE_LENGTH]
+
+        # Limit entries to length
         if not all_pages:
-            del entries[length:]
+            del data['entries'][length:]
 
-        showing = len(entries)
-        total = max(search_total(soup, len(trs)), showing)
-        remaining = max(0, total - (start + showing))
+        data['showing'] = len(data['entries'])
+        data['total'] = max(data['total'], data['showing'])
+        data['remaining'] = max(
+            0, data['total'] - (data['start'] + data['showing']))
 
-        # print("Requested site_page", site_page)
+        if not fails and data['remaining'] and (all_pages or data['showing'] < length):
+            sleep(RECURSIVE_DELAY)
+            return await cls.make_request(
+                # page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
+                query=query, session=session,
+                all_pages=all_pages, page=page, length=length,
+                **{**kwargs, 'data': data}
+            )
 
-        # Instead of Recursion, should use async tasks
-        #
-        # if res.status_code == 200 and remaining and (all_pages or showing < length):
-        #     sleep(0.1)  # Avoid DDOS
-        #     return await cls.make_request(
-        #         page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
-        #         query=query, all_pages=all_pages, length=length,
-        #         **{**kwargs,
-        #             'entries': entries,
-        #             'rec_start': kwargs.get("rec_start", start),
-        #            }
-        #     )
-
-        return {
-            "entries": entries,
-            "start": kwargs.get("rec_start", start),
-            "showing": showing,
-            "remaining": remaining,
-            "total": total,
-        }
+        return data
 
     @classmethod
     def parse_entries(cls, entries: list) -> list[dict]:

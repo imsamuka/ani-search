@@ -173,11 +173,11 @@ class AnimeNSK_Torrent(Queryable):
 
         async def get_page_trs(i: int):
             nonlocal fails
-
             params['page'] = site_page_start + i
+
             async with session.get(url=url, params=params, cookies=cookies) as res:
                 cls.log_response(res)
-                content = (res.ok and await res.text()) or ""
+                content = (res.ok and await res.read()) or ""
                 soup = BeautifulSoup(content, 'html.parser')
 
                 cls.raise_if_expired_cookies(
@@ -195,11 +195,11 @@ class AnimeNSK_Torrent(Queryable):
                 return trs
 
         if all_pages:
-            needed = ceil(data['remaining'] / SITE_PAGE_LENGTH) or 2
+            needed = ceildiv(data['remaining'], SITE_PAGE_LENGTH) or MIN_TESTS
         else:
-            needed = ceil((length - data['showing']) / SITE_PAGE_LENGTH)
+            needed = ceildiv(length - data['showing'], SITE_PAGE_LENGTH)
 
-        needed = min(needed, 5)  # Maximum of 5 requests per iteration
+        needed = min(needed, MAX_SYNC_REQUESTS)
 
         for trs in await asyncio.gather(*[get_page_trs(i) for i in range(needed)]):
             data['entries'].extend(trs)
@@ -218,7 +218,7 @@ class AnimeNSK_Torrent(Queryable):
             0, data['total'] - (data['start'] + data['showing']))
 
         if not fails and data['remaining'] and (all_pages or data['showing'] < length):
-            sleep(0.5)  # Avoid DDOS
+            sleep(RECURSIVE_DELAY)
             return await cls.make_request(
                 query=query, session=session,
                 all_pages=all_pages, page=page, length=length,
