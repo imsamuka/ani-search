@@ -1,5 +1,4 @@
 import logging
-import requests
 import re
 import json
 import datetime
@@ -28,16 +27,6 @@ def as_link(link, _strip_http: bool = None):
         _strip_http = strip_http
     return '[link={}]{}[/link]'.format(link, escape(
         re.sub(r"^(https?://)?(www\.)?", '', link) if _strip_http else link))
-
-
-def get_res_json(res: requests.Response) -> dict:
-    return (res and (res.status_code == 200) and res.json()) or {}
-
-
-def get_res_soup(res: requests.Response) -> BeautifulSoup:
-    content = (res and (res.status_code == 200)
-               and res.content) or "<html></html>"
-    return BeautifulSoup(content, 'html.parser')
 
 
 def get_tag(text, tag): return BeautifulSoup(text, 'html.parser').find(tag)
@@ -228,23 +217,26 @@ class Queryable:
         start = page * length
 
         url = cls.END_POINT
-        params = {}
-        res = requests.get(url, {**params, **kwargs.get("params", {})})
-        cls.log_response(res)
+        params = {**kwargs.get("params", {})}
 
-        # j = get_res_json(res)
-        soup = get_res_soup(res)
+        async with session.get(url=url, params=params) as res:
+            cls.log_response(res)
+            # j = (res.ok and await res.json(content_type=None)) or {}
+            content = (res.ok and await res.text()) or ""
+            soup = BeautifulSoup(content, 'html.parser')
+
         trs = soup.find_all("tr", class_=re.compile(r"^CLASS$"))
-        # assiming trs is already filtered by query
+        # assuming trs is already filtered by query
 
         entries = kwargs.get("entries", [])
-        entries.extend(trs[start:] if all_pages else trs[start:start+length])
+        entries.extend(trs[start:])
+
+        if not all_pages:
+            del entries[length:]
 
         total = len(trs)
         showing = len(entries)
-        remaining = total - (start + showing)
-        if remaining < 0:
-            remaining = 0
+        remaining = max(0, total - (start + showing))
 
         return {
             "entries": entries,
