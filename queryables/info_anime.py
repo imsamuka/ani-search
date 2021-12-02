@@ -6,7 +6,7 @@ class Info_Anime(Queryable):
     END_POINT = "https://www.infoanime.com.br/"
 
     @classmethod
-    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
         start = page * length
         links = cls.read_cache("all") or {}
 
@@ -14,7 +14,7 @@ class Info_Anime(Queryable):
             url = cls.END_POINT + "/listageral"
             params = kwargs.get("params", {})
 
-            async with aiohttp.request("GET", url=url, params=params) as res:
+            async with session.get(url=url, params=params) as res:
                 # cls.log_response(res, page)
 
                 content = (res.status == 200 and await res.text()) or ""

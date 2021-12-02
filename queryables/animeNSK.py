@@ -6,7 +6,7 @@ class AnimeNSK_Packs(Queryable):
     END_POINT = "https://packs.ansktracker.net/"
 
     @classmethod
-    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
         entries = cls.read_cache("entries") or []
         start = page * length
 
@@ -15,7 +15,7 @@ class AnimeNSK_Packs(Queryable):
             params = {"Modo": "Packs", "bot": "Todos",
                       **kwargs.get("params", {})}
 
-            async with aiohttp.request("GET", url=url, params=params) as res:
+            async with session.get(url=url, params=params) as res:
                 # cls.log_response(res, page)
 
                 content = (res.status == 200 and await res.text()) or ""

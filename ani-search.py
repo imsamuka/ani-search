@@ -11,6 +11,7 @@ from rich import traceback
 from os.path import dirname, realpath
 import json
 import asyncio
+import aiohttp
 
 import queryables.queryable as qq
 from queryables.queryable import Queryable
@@ -103,16 +104,18 @@ def search(
         s.start()
         print("\n" * 2)
 
-    asyncio.run(gather_wrapper([
-        try_queryable(cls=cls, debug=debug, s=s,
-                      query=query, all_pages=show_everything)
-        for cls in cls_list]))
+    asyncio.run(
+        tryq_wrapper(cls_list, debug=debug, s=s,
+                     query=query, all_pages=show_everything))
 
     s.stop()
 
 
-async def gather_wrapper(lst):
-    await asyncio.gather(*lst)
+async def tryq_wrapper(cls_list, **kwargs):
+    async with aiohttp.ClientSession() as session:
+        await asyncio.gather(*[
+            try_queryable(cls=cls, session=session, **kwargs)
+            for cls in cls_list])
 
 
 async def try_queryable(cls: Queryable, debug: bool, s: Status, **kwargs):

@@ -222,7 +222,7 @@ class Queryable:
         return t
 
     @classmethod
-    async def make_request(cls, query: str, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
         """ query is assumed to be lowercase and stripped """
         raise NotImplementedError(
             f"{cls.NAME()} - Internet Request has not yet been implemented.")
