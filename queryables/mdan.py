@@ -1,4 +1,5 @@
 from queryables.queryable import *
+from queryables.queryable import _make_php_request
 
 
 class MDAN(Queryable):
@@ -6,10 +7,10 @@ class MDAN(Queryable):
     END_POINT = "https://bt.mdan.org/"
 
     @classmethod
-    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, **kwargs) -> dict:
 
-        def search_total(soup: BeautifulSoup, curr_page_qtd: int) -> int:
-
+        def search_total(soup: BeautifulSoup, trs: list[Tag]) -> int:
+            curr_page_qtd = len(trs)
             table = soup.find("table", "main", align="center")
             curr_pager = table and table.find("td", class_="highlight")
 
@@ -36,18 +37,9 @@ class MDAN(Queryable):
 
             return last_pager_total + (curr_page_qtd if last_pager_i <= current_pager_i else 0)
 
-        SITE_PAGE_LENGTH = 30
+        def get_trs(soup: BeautifulSoup):
+            return soup.find_all("tr", class_=re.compile(r"^browse_color$"))
 
-        data = {
-            "entries": [],
-            "start": page * length,
-            "showing": 0,
-            "remaining": 0,
-            "total": 0,
-            **kwargs.get("data", {})
-        }
-
-        url = cls.END_POINT + "browse.php"
         params = {
             "cats1[]": [1, 2, 5],  # Animes
             "cats2[]": 3,  # Movies
@@ -60,69 +52,16 @@ class MDAN(Queryable):
             **kwargs.get("params", {})
         }
 
-        cookies = kwargs.get("cookies", {})
-        cls.raise_if_missing_cookies(cookies, {"pass", "hashv", "uid"})
-
-        fails = 0
-
-        site_page_start = (data['start'] + data['showing']) // SITE_PAGE_LENGTH
-
-        async def get_page_trs(i: int):
-            nonlocal fails
-            params['page'] = site_page_start + i
-
-            async with session.get(url=url, params=params, cookies=cookies) as res:
-                cls.log_response(res)
-                content = (res.ok and await res.read()) or ""
-                soup = BeautifulSoup(content, 'html.parser')
-
-                cls.raise_if_expired_cookies(
-                    soup.find("form", action="takelogin.php", method="post"))
-
-                # logging.debug(soup.prettify())
-                fails += not res.ok
-
-                trs = soup.find_all("tr", class_=re.compile(r"^browse_color$"))
-
-                # Since a request can fail, get maximum value for all
-                data['total'] = max(
-                    data['total'], search_total(soup, len(trs)))
-
-                return trs
-
-        if all_pages:
-            needed = ceildiv(data['remaining'], SITE_PAGE_LENGTH) or MIN_TESTS
-        else:
-            needed = ceildiv(length - data['showing'], SITE_PAGE_LENGTH)
-
-        needed = min(needed, MAX_SYNC_REQUESTS)
-
-        for trs in await asyncio.gather(*[get_page_trs(i) for i in range(needed)]):
-            data['entries'].extend(trs)
-
-        # If is the first recursive iteration - remove what is before start
-        if not 'data' in kwargs:
-            del data['entries'][:data['start'] % SITE_PAGE_LENGTH]
-
-        # Limit entries to length
-        if not all_pages:
-            del data['entries'][length:]
-
-        data['showing'] = len(data['entries'])
-        data['total'] = max(data['total'], data['showing'])
-        data['remaining'] = max(
-            0, data['total'] - (data['start'] + data['showing']))
-
-        if not fails and data['remaining'] and (all_pages or data['showing'] < length):
-            sleep(RECURSIVE_DELAY)
-            return await cls.make_request(
-                # page=ceil((site_page + 1) * SITE_PAGE_LENGTH / length),
-                query=query, session=session,
-                all_pages=all_pages, page=page, length=length,
-                **{**kwargs, 'data': data}
-            )
-
-        return data
+        return await _make_php_request(
+            query=query,
+            **kwargs,
+            cls=cls,
+            SITE_PAGE_LENGTH=30,
+            params=params,
+            search_total=search_total,
+            get_trs=get_trs,
+            needed_cookies={"pass", "hashv", "uid"},
+        )
 
     @classmethod
     def parse_entries(cls, entries: list) -> list[dict]:

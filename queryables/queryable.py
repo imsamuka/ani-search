@@ -311,3 +311,117 @@ class Queryable:
             )
 
         return t
+
+
+async def _make_php_request(
+        cls,
+        query: str,
+        session: aiohttp.ClientSession,
+        SITE_PAGE_LENGTH: int,
+
+        url: str = None,
+        params: dict = None,
+        search_total=None,
+        get_trs=None,
+
+        all_pages: bool = False,
+        page: int = 0,
+        length: int = 30,
+        **kwargs
+) -> dict:
+
+    data = {
+        "entries": [],
+        "start": page * length,
+        "showing": 0,
+        "remaining": 0,
+        "total": 0,
+        **kwargs.get("data", {})
+    }
+
+    if url is None:
+        url = cls.END_POINT + "browse.php"
+    if params is None:
+        params = {"page": 0, "search": query}
+    if not get_trs:
+        def get_trs(soup): return soup.find_all("tr")
+
+    cookies = kwargs.get("cookies", {})
+    needed_cookies = kwargs.get("needed_cookies", set())
+
+    cls.raise_if_missing_cookies(cookies, needed_cookies)
+
+    fails = 0
+
+    site_page_start = (data['start'] + data['showing']) // SITE_PAGE_LENGTH
+
+    async def get_page_trs(i: int):
+        nonlocal fails
+        params['page'] = site_page_start + i
+
+        async with session.get(url=url, params=params, cookies=cookies) as res:
+            cls.log_response(res)
+            content = (res.ok and await res.read()) or ""
+            soup = BeautifulSoup(content, 'html.parser')
+
+            cls.raise_if_expired_cookies(
+                soup.find("form", action="takelogin.php", method="post"))
+
+            # logging.debug(soup.prettify())
+            fails += not res.ok
+
+            trs = get_trs(soup=soup)
+
+            if search_total:
+                # Since a request can fail, get maximum value for all
+                data['total'] = max(
+                    data['total'], search_total(soup=soup, trs=trs))
+
+            return trs
+
+    if all_pages:
+        needed = ceildiv(data['remaining'], SITE_PAGE_LENGTH) or MIN_TESTS
+    else:
+        needed = ceildiv(length - data['showing'], SITE_PAGE_LENGTH)
+
+    needed = min(needed, MAX_SYNC_REQUESTS)
+
+    for trs in await asyncio.gather(*[get_page_trs(i) for i in range(needed)]):
+        data['entries'].extend(trs)
+
+    # If is the first recursive iteration - remove what is before start
+    if not 'data' in kwargs:
+        del data['entries'][:data['start'] % SITE_PAGE_LENGTH]
+
+    # Limit entries to length
+    if not all_pages:
+        del data['entries'][length:]
+
+    data['showing'] = len(data['entries'])
+    data['total'] = max(data['total'], data['showing'])
+    data['remaining'] = max(
+        0, data['total'] - (data['start'] + data['showing']))
+
+    if not fails and data['remaining'] and (all_pages or data['showing'] < length):
+        sleep(RECURSIVE_DELAY)
+        return await _make_php_request(
+            cls=cls,
+
+            query=query,
+            session=session,
+            SITE_PAGE_LENGTH=SITE_PAGE_LENGTH,
+
+            url=url,
+            params=params,
+            search_total=search_total,
+            process_trs=process_trs,
+
+
+            all_pages=all_pages,
+            page=page,
+            length=length,
+
+            **{**kwargs, 'data': data}
+        )
+
+    return data

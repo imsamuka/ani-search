@@ -1,4 +1,5 @@
 from queryables.queryable import *
+from queryables.queryable import _make_php_request
 
 
 class AnimeNSK_Packs(Queryable):
@@ -89,9 +90,9 @@ class AnimeNSK_Torrent(Queryable):
     END_POINT = "https://www.ansktracker.net/"
 
     @classmethod
-    async def make_request(cls, query: str, session: aiohttp.ClientSession, all_pages=False, page=0, length=30, **kwargs) -> dict:
+    async def make_request(cls, query: str, **kwargs) -> dict:
 
-        def search_total(soup: BeautifulSoup) -> int:
+        def search_total(soup: BeautifulSoup, **_) -> int:
             table = soup.find("span", class_=re.compile(r"^pager$"))
             curr_pager = table and table.find(
                 "font", class_=re.compile(r"^gray$"))
@@ -126,25 +127,17 @@ class AnimeNSK_Torrent(Queryable):
 
             return total_of(reduce(search_last, pagers))
 
-        def correct_first_tr(soup: BeautifulSoup, tr: Tag) -> Tag:
-            table_teste = soup.find("table", class_=re.compile(r"^teste$"))
-            cursed_tr = table_teste.find_all("tr", recursive=False)[1]
-            missing_tds = cursed_tr.find_all("td", recursive=False)[2:]
+        def get_trs(soup: BeautifulSoup):
+            trs = soup.find_all("tr", id=re.compile(r"^trTorrentRow$"))
+            if trs:
+                # Correction on the first tr
+                table_teste = soup.find("table", class_=re.compile(r"^teste$"))
+                cursed_tr = table_teste.find_all("tr", recursive=False)[1]
+                missing_tds = cursed_tr.find_all("td", recursive=False)[2:]
+                trs[0].extend(missing_tds)
 
-            tr.extend(missing_tds)
+            return trs
 
-        SITE_PAGE_LENGTH = 15
-
-        data = {
-            "entries": [],
-            "start": page * length,
-            "showing": 0,
-            "remaining": 0,
-            "total": 0,
-            **kwargs.get("data", {})
-        }
-
-        url = cls.END_POINT + "browse.php"
         params = {
             "search": query,
             "page": 0,
@@ -164,68 +157,16 @@ class AnimeNSK_Torrent(Queryable):
             **kwargs.get("params", {})
         }
 
-        cookies = kwargs.get("cookies", {})
-        cls.raise_if_missing_cookies(cookies, {"pass", "uid"})
-
-        fails = 0
-
-        site_page_start = (data['start'] + data['showing']) // SITE_PAGE_LENGTH
-
-        async def get_page_trs(i: int):
-            nonlocal fails
-            params['page'] = site_page_start + i
-
-            async with session.get(url=url, params=params, cookies=cookies) as res:
-                cls.log_response(res)
-                content = (res.ok and await res.read()) or ""
-                soup = BeautifulSoup(content, 'html.parser')
-
-                cls.raise_if_expired_cookies(
-                    soup.find("form", action="takelogin.php", method="post"))
-
-                # logging.debug(soup.prettify())
-                fails += not res.ok
-
-                # Since a request can fail, get maximum value for all
-                data['total'] = max(data['total'], search_total(soup))
-
-                trs = soup.find_all("tr", id=re.compile(r"^trTorrentRow$"))
-                if trs:
-                    correct_first_tr(soup, trs[0])
-                return trs
-
-        if all_pages:
-            needed = ceildiv(data['remaining'], SITE_PAGE_LENGTH) or MIN_TESTS
-        else:
-            needed = ceildiv(length - data['showing'], SITE_PAGE_LENGTH)
-
-        needed = min(needed, MAX_SYNC_REQUESTS)
-
-        for trs in await asyncio.gather(*[get_page_trs(i) for i in range(needed)]):
-            data['entries'].extend(trs)
-
-        # If is the first recursive iteration - remove what is before start
-        if not 'data' in kwargs:
-            del data['entries'][:data['start'] % SITE_PAGE_LENGTH]
-
-        # Limit entries to length
-        if not all_pages:
-            del data['entries'][length:]
-
-        data['showing'] = len(data['entries'])
-        data['total'] = max(data['total'], data['showing'])
-        data['remaining'] = max(
-            0, data['total'] - (data['start'] + data['showing']))
-
-        if not fails and data['remaining'] and (all_pages or data['showing'] < length):
-            sleep(RECURSIVE_DELAY)
-            return await cls.make_request(
-                query=query, session=session,
-                all_pages=all_pages, page=page, length=length,
-                **{**kwargs, 'data': data}
-            )
-
-        return data
+        return await _make_php_request(
+            query=query,
+            **kwargs,
+            cls=cls,
+            SITE_PAGE_LENGTH=15,
+            params=params,
+            search_total=search_total,
+            get_trs=get_trs,
+            needed_cookies={"pass", "uid"},
+        )
 
     @ classmethod
     def parse_entries(cls, entries: list) -> list[dict]:
