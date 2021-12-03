@@ -113,9 +113,15 @@ def search(
 
 async def tryq_wrapper(cls_list, **kwargs):
     async with ClientSession() as session:
-        await asyncio.gather(*[
-            try_queryable(cls=cls, session=session, **kwargs)
-            for cls in cls_list])
+        tasks = []
+        for cls in cls_list:
+            task = asyncio.create_task(
+                try_queryable(cls=cls, session=session, **kwargs),
+                name=cls.__name__
+            )
+            tasks.append(task)
+
+        await asyncio.gather(*tasks)
 
 
 async def try_queryable(cls: Queryable, debug: bool, status: Status, **kwargs):
@@ -168,6 +174,11 @@ async def run_queryable(cls: Queryable, status: Status, **kwargs):
 
     status.update(f"[status]Creating table for {cls.NAME()}...")
     table = cls.make_table(data)
+    status.update("[status]Awaiting for " + ", ".join(
+        [queryables_dict[t.get_name()].NAME()
+         for t in asyncio.all_tasks()
+         if t.get_name() in queryables_dict
+         ]) + " data...")
 
     assert table.row_count, "constructed table with no rows"
 
