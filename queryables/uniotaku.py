@@ -1,5 +1,7 @@
 from queryables.queryable import *
 
+MAX_LENGTH = 1000
+
 
 class Uniotaku(Queryable):
 
@@ -10,8 +12,8 @@ class Uniotaku(Queryable):
 
         start = page * length + kwargs.get("rec_start", 0)
 
-        if all_pages and length != 1000:
-            length = 1000
+        if all_pages and length != MAX_LENGTH:
+            length = MAX_LENGTH
             page = 0
 
         url = cls.END_POINT + "torrents_.php"
@@ -40,18 +42,16 @@ class Uniotaku(Queryable):
         total = max(showing, j.get("recordsFiltered", 0))
         remaining = max(0, total - (kwargs.get("rec_start", start) + showing))
 
-        # Instead of Recursion, should use async tasks
-        #
-        # if res.status == 200 and remaining and (all_pages or showing < length):
-        #     sleep(0.1)  # Avoid DDOS
-        #     return await cls.make_request(
-        #         page=page+1,
-        #         query=query, all_pages=all_pages, length=length,
-        #         **{**kwargs,
-        #             'entries': entries,
-        #             'rec_start': kwargs.get("rec_start", start),
-        #            }
-        #     )
+        if res.ok and remaining and (all_pages or showing < length):
+            sleep(RECURSIVE_DELAY)
+            return await cls.make_request(
+                query=query, session=session,
+                all_pages=all_pages, page=page+1, length=length,
+                **{**kwargs,
+                    'entries': entries,
+                    'rec_start': kwargs.get("rec_start", start),
+                   }
+            )
 
         return {
             "entries": entries,
