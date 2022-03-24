@@ -98,7 +98,7 @@ def search(
         print("No queryables to run")
         return
 
-    status = c.status("[status]Starting", spinner="bouncingBar")
+    status = c.status("[status]Starting")
 
     if not debug:
         status.start()
@@ -127,6 +127,7 @@ async def tryq_wrapper(cls_list, **kwargs):
 async def try_queryable(cls: Queryable, debug: bool, status: Status, **kwargs):
     if not (isinstance(cls, type) and issubclass(cls, Queryable)):
         print(f"{cls} is not a valid Queryable.", justify="center")
+        return
 
     try:
         status.update(f"Starting {cls.NAME()}")
@@ -136,7 +137,7 @@ async def try_queryable(cls: Queryable, debug: bool, status: Status, **kwargs):
             logging.error(e)
         else:
             print(e, justify="center")
-    except Exception as e:
+    except (Exception, AssertionError) as e:
         if debug:
             rich_log.exception(e)
         else:
